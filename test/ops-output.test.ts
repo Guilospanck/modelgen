@@ -1,10 +1,11 @@
 import { test, expect } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openWorkspace } from "../src/ops/workspace";
 import { createModel } from "../src/ops/create";
 import { editModel } from "../src/ops/edit";
+import { listModels } from "../src/ops/list";
 import { capture } from "../src/ops/capture";
 import { exportModel } from "../src/ops/export";
 import { buildProject } from "../src/ops/build";
@@ -94,4 +95,39 @@ test("describe covers every topic and the schema", () => {
   expect(describeOp({ topic: "schema" }).schema).toBeDefined();
   expect(describeOp().topic).toBe("overview");
   expect(code(() => describeOp({ topic: "kittens" }))).toBe("unknown_topic");
+});
+
+// A cetacean's `rate` is spliced into the Metal source, so a non-numeric rate fails the life lint.
+const badLife = (w: ReturnType<typeof openWorkspace>, name = "whale") => {
+  createModel(w, { name });
+  editModel(w, { model: name, ops: [
+    { add: { part: { name: "body", sphere: { radius: 0.5 }, position: [0, 0.5, 0] } } },
+    { set: { normalize: true, anchors: { slots: ["head"] }, life: { plan: "cetacean", params: { rate: "bogus" } } } },
+  ] });
+};
+
+test("export writes nothing when the life program fails", () => {
+  const w = openWorkspace(tmp()), out = join(w.root, "dist");
+  badLife(w);
+  expect(code(() => exportModel(w, { model: "whale", out }))).toBe("life");
+  expect(existsSync(out) ? readdirSync(out) : []).toEqual([]);
+});
+
+test("build skips a model whose life fails and writes nested aggregates", () => {
+  const root = tmp();
+  writeFileSync(join(root, "modelgen.yaml"), [
+    "outputs:",
+    "  - dir: ios", "    formats: [glb]", "    anchors: meta/anchors.json", "    life: meta/life.json",
+  ].join("\n"));
+  const w = lantern(root);
+  editModel(w, { model: "lantern", ops: [{ set: { anchors: { slots: ["head"] } } }] });
+  badLife(w);
+  const r = buildProject(w);
+  expect(r.failed.map(f => f.model)).toEqual(["whale"]);
+  expect(r.failed[0].issues[0].code).toBe("life");
+  expect(existsSync(join(root, "ios/whale.glb"))).toBe(false);
+  expect(existsSync(join(root, "ios/lantern.glb"))).toBe(true);
+  expect(Object.keys(JSON.parse(readFileSync(join(root, "ios/meta/anchors.json"), "utf8")))).toEqual(["lantern"]);
+  expect(JSON.parse(readFileSync(join(root, "ios/meta/life.json"), "utf8"))).toEqual({});
+  expect(listModels(w).models.find(m => m.name === "whale")?.exportedAt).toBeUndefined();
 });

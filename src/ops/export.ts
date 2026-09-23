@@ -19,29 +19,24 @@ export function exportModel(ws: Workspace, input: { model: string; formats?: For
   const { files, issues } = exportModelFiles(doc, compiled, formats, { part: input.part });
   if (!files.length) throw new OpError(`${doc.name} can't be exported`, issues);
 
-  mkdirSync(out, { recursive: true });
+  // Everything that can fail runs before the first write, so a failed export leaves no files behind.
   const base = `${doc.name}${input.part !== undefined ? "." + slug(input.part) : ""}`;
-  const written: { path: string; format: string; bytes: number }[] = files.map(f => {
-    const path = join(out, `${base}.${f.format}`);
-    writeFileSync(path, f.data);
-    return { path, format: f.format, bytes: f.data.length };
-  });
+  const pending: { name: string; format: string; data: Buffer | string }[] = files.map(f => ({ name: `${base}.${f.format}`, format: f.format, data: f.data }));
   if (input.part === undefined) {
     const flat = flatten(compiled.nodes);
     const anchors = modelAnchors(doc, flat);
-    if (anchors) {
-      const path = join(out, `${base}.anchors.json`);
-      writeFileSync(path, JSON.stringify(anchors, null, 1));
-      written.push({ path, format: "anchors", bytes: JSON.stringify(anchors, null, 1).length });
-    }
     const life = modelLife(doc, flat, anchors);
-    if (life) {
-      if (life.problems.length) throw new OpError(`${doc.name}: life program won't compile`, life.problems.map(p => ({ severity: "error" as const, code: "life", message: p })));
-      const path = join(out, `${base}.life.json`);
-      writeFileSync(path, JSON.stringify(life.entry));
-      written.push({ path, format: "life", bytes: JSON.stringify(life.entry).length });
-    }
+    if (life?.problems.length) throw new OpError(`${doc.name}: life program won't compile`, life.problems.map(p => ({ severity: "error" as const, code: "life", message: p })));
+    if (anchors) pending.push({ name: `${base}.anchors.json`, format: "anchors", data: JSON.stringify(anchors, null, 1) });
+    if (life) pending.push({ name: `${base}.life.json`, format: "life", data: JSON.stringify(life.entry) });
   }
+
+  mkdirSync(out, { recursive: true });
+  const written = pending.map(f => {
+    const path = join(out, f.name);
+    writeFileSync(path, f.data);
+    return { path, format: f.format, bytes: typeof f.data === "string" ? Buffer.byteLength(f.data) : f.data.length };
+  });
   markExported(ws, doc.name);
   return { model: doc.name, files: written, issues };
 }

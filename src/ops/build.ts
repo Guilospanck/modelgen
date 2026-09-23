@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { OpError, type Issue, type ModelDoc } from "../document";
 import { flatten, type Compiled, type FlatPart } from "../scene/compile";
 import { exportModelFiles, modelAnchors, modelLife, type Anchor } from "../export/model";
@@ -30,8 +30,9 @@ export function buildProject(ws: Workspace, input: { models?: string[] } = {}) {
       const flat = flatten(compiled.nodes);
       const anchors = modelAnchors(doc, flat);
       const life = modelLife(doc, flat, anchors);
+      // A life program that won't compile fails the model: nothing is written or aggregated for it.
       if (life?.problems.length) fail(name, life.problems.map(p => ({ severity: "error", code: "life", message: p })));
-      v = { doc, compiled, flat, anchors, life: life?.entry };
+      else v = { doc, compiled, flat, anchors, life: life?.entry };
     } catch (e) {
       if (!(e instanceof OpError)) throw e;
       fail(name, e.issues);
@@ -64,6 +65,7 @@ export function buildProject(ws: Workspace, input: { models?: string[] } = {}) {
     const aggregate = <T>(rel: string | undefined, entries: Record<string, T>, indent?: number) => {
       if (!rel) return undefined;
       const path = join(dir, rel);
+      mkdirSync(dirname(path), { recursive: true });
       const merged = subset && existsSync(path) ? { ...JSON.parse(readFileSync(path, "utf8")), ...entries } : entries;
       writeFileSync(path, indent ? JSON.stringify(sortKeys(merged), null, indent) : JSON.stringify(sortKeys(merged)));
       return path;
