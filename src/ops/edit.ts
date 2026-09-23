@@ -22,15 +22,23 @@ export type EditOp = z.infer<typeof EditOpSchema>;
 
 type Where = { list: Part[]; index: number; part: Part };
 
+// Parts are only validated at the end of a batch, so earlier ops may have left malformed parts behind:
+// walk defensively and skip anything that isn't a part object.
+const isPart = (p: unknown): p is Part => !!p && typeof p === "object" && !Array.isArray(p);
+const kids = (p: Part): Part[] | undefined => (Array.isArray(p.group?.parts) ? p.group!.parts : undefined);
+
 function locate(parts: Part[], name: string): Where | undefined {
   for (let i = 0; i < parts.length; i++) {
-    if (parts[i].name === name) return { list: parts, index: i, part: parts[i] };
-    const g = parts[i].group;
-    if (g) { const hit = locate(g.parts, name); if (hit) return hit; }
+    const p = parts[i];
+    if (!isPart(p)) continue;
+    if (p.name === name) return { list: parts, index: i, part: p };
+    const k = kids(p);
+    if (k) { const hit = locate(k, name); if (hit) return hit; }
   }
   return undefined;
 }
-const allNames = (parts: Part[]): string[] => parts.flatMap(p => [p.name, ...(p.group ? allNames(p.group.parts) : [])]);
+const allNames = (parts: Part[]): string[] =>
+  parts.filter(isPart).flatMap(p => [String(p.name), ...(kids(p) ? allNames(kids(p)!) : [])]);
 const containsScript = (p: any): boolean => !!p && (p.script !== undefined || (Array.isArray(p.group?.parts) && p.group.parts.some(containsScript)));
 
 function mustFind(doc: ModelDoc, name: string): Where {
@@ -42,7 +50,9 @@ function mustFind(doc: ModelDoc, name: string): Where {
 function groupList(doc: ModelDoc, name: string): Part[] {
   const { part } = mustFind(doc, name);
   if (!part.group) throw opError("not_a_group", `"${name}" is not a group`, "only groups can have children; add a group part first");
-  return part.group.parts;
+  const k = kids(part);
+  if (!k) throw opError("invalid_op", `group "${name}" has no parts list`, `"${name}" is malformed: a group needs group: { parts: [...] }`);
+  return k;
 }
 
 // Shape objects merge when the shape stays the same; a new shape key replaces the old one; null unsets.
@@ -85,7 +95,7 @@ function applyOp(doc: ModelDoc, op: EditOp, ws: Workspace, changes: string[]) {
   } else if ("reparent" in op) {
     const w = mustFind(doc, op.reparent.name);
     if (op.reparent.parent !== null) {
-      if (op.reparent.parent === op.reparent.name || (w.part.group && locate(w.part.group.parts, op.reparent.parent)))
+      if (op.reparent.parent === op.reparent.name || (kids(w.part) && locate(kids(w.part)!, op.reparent.parent)))
         throw opError("cycle", `can't move "${op.reparent.name}" inside itself`, "pick a parent outside its subtree");
       groupList(doc, op.reparent.parent);
     }
@@ -94,11 +104,12 @@ function applyOp(doc: ModelDoc, op: EditOp, ws: Workspace, changes: string[]) {
     changes.push(`moved "${op.reparent.name}" to ${op.reparent.parent === null ? "the top level" : `"${op.reparent.parent}"`}`);
   } else if ("duplicate" in op) {
     const w = mustFind(doc, op.duplicate.name);
+    guard(w.part);
     if (locate(doc.parts, op.duplicate.as)) throw opError("exists", `a part named "${op.duplicate.as}" already exists`);
     const copy: Part = structuredClone(w.part);
-    const prefix = (ps: Part[]) => ps.forEach(c => { c.name = `${op.duplicate.as}.${c.name}`; if (c.group) prefix(c.group.parts); });
+    const prefix = (ps: Part[]) => ps.filter(isPart).forEach(c => { c.name = `${op.duplicate.as}.${c.name}`; if (kids(c)) prefix(kids(c)!); });
     copy.name = op.duplicate.as;
-    if (copy.group) prefix(copy.group.parts);
+    if (kids(copy)) prefix(kids(copy)!);
     if (op.duplicate.set) { guard(op.duplicate.set); merge(copy, op.duplicate.set); }
     w.list.splice(w.index + 1, 0, copy);
     changes.push(`duplicated "${op.duplicate.name}" as "${op.duplicate.as}"`);
@@ -107,7 +118,7 @@ function applyOp(doc: ModelDoc, op: EditOp, ws: Workspace, changes: string[]) {
     changes.push(`set material "${op.set_material.name}"`);
   } else if ("remove_material" in op) {
     const users: string[] = [];
-    const scan = (ps: Part[]) => ps.forEach(p => { if (p.material === op.remove_material.name) users.push(p.name); if (p.group) scan(p.group.parts); });
+    const scan = (ps: Part[]) => ps.filter(isPart).forEach(p => { if (p.material === op.remove_material.name) users.push(p.name); if (kids(p)) scan(kids(p)!); });
     scan(doc.parts);
     if (users.length) throw opError("in_use", `material "${op.remove_material.name}" is used by ${users.map(u => `"${u}"`).join(", ")}`, "change those parts' material first");
     if (doc.materials) delete doc.materials[op.remove_material.name];
@@ -137,7 +148,12 @@ export function editModel(ws: Workspace, input: { model: string; ops: unknown[] 
   const changes: string[] = [];
   parsed.forEach((op, i) => {
     try { applyOp(next, op, ws, changes); } catch (e) {
-      if (!(e instanceof OpError)) throw e;
+      const where = `ops[${i}] (${Object.keys(op)[0]})`;
+      // Backstop: anything unexpected while applying an op is reported against that op, never as a crash.
+      if (!(e instanceof OpError)) throw new OpError(`ops[${i}]: ${(e as Error)?.message ?? String(e)}`, [{
+        severity: "error", code: "invalid_op", path: `ops[${i}]`, message: `${where}: ${(e as Error)?.message ?? String(e)}`,
+        hint: "an earlier op in this batch may have left a malformed part; check each part's fields",
+      }]);
       throw new OpError(`ops[${i}]: ${e.message}`, e.issues.map(x => ({ ...x, path: `ops[${i}]`, message: `ops[${i}] (${Object.keys(op)[0]}): ${x.message}` })));
     }
   });

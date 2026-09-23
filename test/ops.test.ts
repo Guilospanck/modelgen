@@ -127,3 +127,30 @@ test("model names that could escape the models directory are rejected", () => {
   expect(code(() => editModel(w, { model: "../x", ops: [{ remove: { name: "x" } }] }))).toBe("invalid_name");
   expect(code(() => undoModel(w, { model: "../x" }))).toBe("invalid_name");
 });
+
+test("malformed parts mid-batch fail as invalid_op, not a crash, and change nothing", () => {
+  const w = ws();
+  const { path } = createModel(w, { name: "m" });
+  const before = readFileSync(path, "utf8");
+  expect(code(() => editModel(w, { model: "m", ops: [{ add: { part: { name: "g", group: {} } } }, { add: { parent: "g", part: { name: "x", box: { size: [1, 1, 1] } } } }] }))).toBe("invalid_op");
+  expect(code(() => editModel(w, { model: "m", ops: [{ add: { part: { name: "g2", group: { parts: [null] } } } }, { remove: { name: "zz" } }] }))).toBe("not_found");
+  // with no later op tripping over it, the malformed part is caught by final validation
+  expect(code(() => editModel(w, { model: "m", ops: [{ add: { part: { name: "g3", group: { parts: [null] } } } }] }))).toBe("schema");
+  expect(readFileSync(path, "utf8")).toBe(before);
+  expect(historyDepth(w, "m").undo).toBe(0);
+});
+
+test("inspect reports the requested model name, not the file's internal name", () => {
+  const w = ws();
+  const { path } = createModel(w, { name: "foo" });
+  writeFileSync(path, readFileSync(path, "utf8").replace("name: foo", "name: bar"));
+  expect(readFileSync(path, "utf8")).toContain("name: bar");
+  expect(inspectModel(w, { model: "foo" }).model).toBe("foo");
+});
+
+test("duplicating an existing script part needs --allow-scripts", () => {
+  const w = ws();
+  const { path } = createModel(w, { name: "m" });
+  writeFileSync(path, "modelgen: 1\nname: m\nparts:\n  - name: s\n    script:\n      module: x.js\n");
+  expect(code(() => editModel(w, { model: "m", ops: [{ duplicate: { name: "s", as: "s2" } }] }))).toBe("scripts_disabled");
+});

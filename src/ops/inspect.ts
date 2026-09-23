@@ -58,9 +58,9 @@ export function inspectModel(ws: Workspace, input: { model: string; part?: strin
   const parts = nodes.map(info);
   const bounds = parts.reduce<Bounds | undefined>((acc, p) => union(acc, p.bounds), undefined);
   return {
-    model: doc.name, path: file, bytes: statSync(file).size, normalize: doc.normalize === true,
+    model: input.model, path: file, bytes: statSync(file).size, normalize: doc.normalize === true,
     materials: doc.materials ?? {}, parts, ...(bounds ? { bounds } : {}),
     ...(doc.anchors ? { anchors: doc.anchors } : {}), ...(doc.life ? { life: doc.life } : {}),
-    history: historyDepth(ws, doc.name),
+    history: historyDepth(ws, input.model),
   };
 }
