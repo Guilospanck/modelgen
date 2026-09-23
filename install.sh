@@ -12,7 +12,10 @@ base="https://github.com/$REPO/releases/download/v$version"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 curl -fsSL "$base/$name.tar.gz" -o "$tmp/$name.tar.gz"
 curl -fsSL "$base/SHA256SUMS" -o "$tmp/SHA256SUMS"
-(cd "$tmp" && grep " $name.tar.gz\$" SHA256SUMS | shasum -a 256 -c -) >/dev/null || { echo "checksum mismatch" >&2; exit 1; }
+if command -v sha256sum >/dev/null 2>&1; then sha="sha256sum"; elif command -v shasum >/dev/null 2>&1; then sha="shasum -a 256"; else echo "no sha256 tool found (install coreutils or perl)" >&2; exit 1; fi
+sum="$(grep " $name.tar.gz\$" "$tmp/SHA256SUMS" || true)"
+[ -n "$sum" ] || { echo "no checksum for $name.tar.gz in SHA256SUMS" >&2; exit 1; }
+(cd "$tmp" && echo "$sum" | $sha -c -) >/dev/null || { echo "checksum mismatch" >&2; exit 1; }
 tar -xzf "$tmp/$name.tar.gz" -C "$tmp"
 dir="${INSTALL_DIR:-$HOME/.local/bin}"
 mkdir -p "$dir"

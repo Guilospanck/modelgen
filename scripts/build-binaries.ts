@@ -11,8 +11,10 @@ async function main() {
   await $`rm -rf dist/bin dist/release && mkdir -p dist/bin dist/release`;
   for (const target of TARGETS.filter(t => !only.length || only.includes(t))) {
     const name = `modelgen-${version}-${target}`;
+    // x64 uses Bun's baseline builds so older CPUs without AVX2 do not crash with an illegal instruction.
+    const bunTarget = target.endsWith("-x64") ? `bun-${target}-baseline` : `bun-${target}`;
     const exe = target.startsWith("windows") ? "modelgen.exe" : "modelgen";
-    await $`bun build src/cli/bin.ts --compile --minify --target=bun-${target} --outfile dist/bin/${name}/${exe}`;
+    await $`bun build src/cli/bin.ts --compile --minify --target=${bunTarget} --outfile dist/bin/${name}/${exe}`;
     await $`cp README.md LICENSE dist/bin/${name}/`;
     if (target.startsWith("windows")) await $`zip -qr ../release/${name}.zip ${name}`.cwd("dist/bin");
     else await $`tar -czf ../release/${name}.tar.gz ${name}`.cwd("dist/bin");
