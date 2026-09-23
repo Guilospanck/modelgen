@@ -6,13 +6,23 @@ on:
   workflow_call:
 
 jobs:
-  node:
-    runs-on: ubuntu-latest
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-15]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm test
-      - run: npm run example
-
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
+      - name: npm package runs under Node
+        run: |
+          bun run build:npm
+          node dist/cli/bin.js --version
+          cp -R examples "$RUNNER_TEMP/examples"
+          node dist/cli/bin.js build --project "$RUNNER_TEMP/examples"

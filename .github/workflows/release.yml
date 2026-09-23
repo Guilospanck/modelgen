@@ -5,30 +5,95 @@ on:
 
 permissions:
   contents: write
-  id-token: write # npm provenance
+  id-token: write
 
 jobs:
   test:
     uses: ./.github/workflows/ci.yml
 
-  publish:
+  binaries:
     needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Tag matches package.json
+        run: test "v$(bun -e 'console.log(require("./package.json").version)')" = "$GITHUB_REF_NAME"
+      - run: bun run build:bin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: dist/release/
+
+  smoke:
+    needs: binaries
+    strategy:
+      matrix:
+        include:
+          - { os: macos-15, target: darwin-arm64 }
+          - { os: macos-15-intel, target: darwin-x64 }
+          - { os: ubuntu-latest, target: linux-x64 }
+          - { os: ubuntu-24.04-arm, target: linux-arm64 }
+          - { os: windows-latest, target: windows-x64 }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: release
+      - name: Run the binary on its own OS
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          name="modelgen-$v-${{ matrix.target }}"
+          cd release
+          if [ -f "$name.zip" ]; then unzip -q "$name.zip"; bin="$PWD/$name/modelgen.exe"; else tar -xzf "$name.tar.gz"; bin="$PWD/$name/modelgen"; fi
+          "$bin" --version
+          "$bin" describe shapes > /dev/null
+          cp -R ../examples "$RUNNER_TEMP/examples"
+          "$bin" build --project "$RUNNER_TEMP/examples"
+
+  publish:
+    needs: smoke
     runs-on: ubuntu-latest
     env:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      - name: Tag matches package.json version
-        run: test "v$(node -p 'require("./package.json").version')" = "$GITHUB_REF_NAME"
-      - name: Publish to npm (skipped until the NPM_TOKEN secret exists)
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: release
+      - name: GitHub release
+        run: gh release create "$GITHUB_REF_NAME" release/* --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - run: bun install --frozen-lockfile && bun run build:npm
+      - name: npm (skipped until the NPM_TOKEN secret exists)
         if: env.NPM_TOKEN != ''
         run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: gh release create "$GITHUB_REF_NAME" --generate-notes
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Homebrew tap (skipped until the TAP_TOKEN secret exists)
+        if: env.TAP_TOKEN != ''
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/Guilospanck/homebrew-tap.git" tap
+          mkdir -p tap/Formula
+          bun scripts/formula.ts "$v" release/SHA256SUMS > tap/Formula/modelgen.rb
+          cd tap
+          git config user.name "modelgen release"
+          git config user.email "noreply@github.com"
+          git add Formula/modelgen.rb
+          git commit -m "modelgen $v"
+          git push
