@@ -2,6 +2,8 @@ import { test, expect } from "bun:test";
 import { checkScene } from "../src/checks";
 import { part, place, uvSphere } from "../src/engine/lib";
 import type { FlatPart } from "../src/scene/compile";
+import { box, cylinder } from "../src/engine/shapes";
+import { transformMesh } from "../src/scene/transform";
 
 const ball = (owner: string, t: number[], opts: object = {}): FlatPart => ({ owner, part: part(place(uvSphere(), { s: 0.2, t }), "#aa5533", opts) });
 
@@ -26,4 +28,20 @@ test("empty and degenerate models", () => {
   const flat: FlatPart = { owner: "bad", part: { mesh: { pos: [[0, 0, 0]], idx: [], uv: [[0, 0]] }, color: "#ffffff" } };
   const issues = checkScene([ball("ok", [0, 0, 0]), flat]);
   expect(issues.map(i => [i.code, i.part])).toEqual([["degenerate", "bad"]]);
+});
+
+
+const lamp = (shadeY: number): FlatPart[] => [
+  { owner: "base", part: part(box(1, 0.2, 1), "#2a2a2a") },
+  { owner: "shade", part: part(transformMesh(cylinder(0.4, 0.4, 1), { t: [0, shadeY, 0], r: [0, 0, 0], s: [1, 1, 1] }), "#e8a13a") },
+];
+
+test("flush (face-to-face) contact is touching, not floating", () => {
+  expect(checkScene(lamp(0.6))).toEqual([]);
+});
+
+test("a small clear gap above a flush surface is still floating", () => {
+  const issues = checkScene(lamp(0.65));
+  expect(issues).toHaveLength(1);
+  expect(issues[0]).toMatchObject({ code: "floating", part: "shade" });
 });

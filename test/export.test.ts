@@ -10,7 +10,7 @@ const doc = (extra: Partial<ModelDoc> = {}): ModelDoc => ({
   modelgen: 1, name: "lamp",
   materials: { iron: { color: "#2a2a2a", metalness: 0.8 }, paper: { color: "#e8a13a", texture: { pattern: "stripes" } } },
   parts: [
-    { name: "base", box: { size: [1, 0.4, 1] }, material: "iron" },
+    { name: "base", box: { size: [1, 0.2, 1] }, material: "iron" },
     { name: "Top ☀", position: [0, 0.6, 0], group: { parts: [
       { name: "shade", cylinder: { radius: 0.4, height: 1 }, material: "paper" },
     ] } },
