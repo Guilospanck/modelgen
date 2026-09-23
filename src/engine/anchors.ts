@@ -1,3 +1,4 @@
+// @ts-nocheck — ported engine; behaviour frozen by test/engine.golden.test.ts
 // Cosmetic anchor heuristics: where a hat, scarf, saddle, tail ribbon... sits
 // on a model, computed from its built parts.
 //
@@ -10,8 +11,7 @@
 // Slots: head, neck, back, claws, teeth, tail, fins, companion. Unknown slots
 // are skipped. Each anchor is { pos: [x, y, z], scale } — scale is the size a
 // ~1.0-nominal accessory should be multiplied by.
-"use strict";
-const { assembleTransform } = require("./lib");
+import { assembleTransform } from "./lib";
 
 
 // Gather solid-part vertices (skip surf tufts — they'd bias toward fur tips).
@@ -228,4 +228,5 @@ function toModelSpace(anchors, parts) {
   return anchors;
 }
 
-module.exports = { anchorsFor, toModelSpace, SLOTS: ["head", "neck", "back", "claws", "teeth", "tail", "fins", "companion"] };
+export const SLOTS = ["head", "neck", "back", "claws", "teeth", "tail", "fins", "companion"];
+export { anchorsFor, toModelSpace };

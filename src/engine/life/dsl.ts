@@ -1,4 +1,4 @@
-"use strict";
+// @ts-nocheck — ported engine; behaviour frozen by test/engine.golden.test.ts
 // A tiny deformation DSL that runs two ways from one program: evaluated in
 // JS (so frames can be rendered and judged here) and emitted as a Metal
 // snippet for SceneKit's geometry shader modifier (so the app plays the very
@@ -171,4 +171,4 @@ function lint(metal) {
   return problems;
 }
 
-module.exports = { run, emit, lint, FUNCS };
+export { run, emit, lint, FUNCS };

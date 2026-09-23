@@ -1,4 +1,4 @@
-"use strict";
+// @ts-nocheck — ported engine; behaviour frozen by test/engine.golden.test.ts
 // Behaviour programs per body plan, parameterised by the model's rig. Each
 // returns a DSL program (see dsl.js) that plays a 16-second cycle.
 const PI = 3.14159;
@@ -347,4 +347,4 @@ function biped(R) {
 
 const PLANS = { quad, winged_quad: wingedQuad, flyer, perched, cetacean, fish, seahorse, seal, turtle, serpent, kraken, biped };
 function program(R) { return PLANS[R.plan](R); }
-module.exports = { program };
+export { program };

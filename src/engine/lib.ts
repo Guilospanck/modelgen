@@ -1,8 +1,8 @@
+// @ts-nocheck — ported engine; behaviour frozen by test/engine.golden.test.ts
 // Mesh + texture + USDZ authoring library for the creature model generator.
 // Meshes carry UVs; materials can reference procedurally painted PNG textures
 // (fur/feathers/scales/spots/stripes) packed into the .usdz alongside the layer.
-"use strict";
-const zlib = require("zlib");
+import * as zlib from "node:zlib";
 
 // ---------- small vector helpers ----------
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -626,7 +626,7 @@ function usdz(entries) {
   return Buffer.concat([...chunks, cd, eocd]);
 }
 
-module.exports = {
+export {
   uvSphere, tube, slab, wingOutline, place, placeM, mirrorX, part, assemble, assembleTransform,
   paintSkin, usda, usdz, encodePNG, add, sub, scale, norm, rng, fbm,
 };

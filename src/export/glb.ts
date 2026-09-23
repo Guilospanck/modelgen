@@ -1,9 +1,5 @@
-// glTF 2.0 binary (.glb) writer: the same assembled groups usda() writes,
-// for three.js, Babylon.js, <model-viewer>, Android SceneView, Godot, Unity...
-//
-// One mesh, one primitive per group; PBR metallic-roughness materials with
-// the painted diffuse + normal PNGs embedded. Colors are linear, like usda().
-"use strict";
+// @ts-nocheck — body ported from gltf.js; Task 7 adds glbScene
+import type { Group, Skin } from "../engine/types";
 
 const hexToLinear = hex => {
   const c = parseInt(hex.slice(1), 16);
@@ -102,4 +98,25 @@ function glb(groups, skins = {}) {
   return Buffer.concat([header, chunkHead(json.length, 0x4e4f534a), json, chunkHead(bin.length, 0x004e4942), bin]);
 }
 
-module.exports = { glb };
+export { glb };
+
+// glTF 2.0 binary: header, JSON chunk, BIN chunk, sizes consistent.
+export function validateGlb(b: Buffer): string[] {
+  const issues: string[] = [];
+  if (b.length < 28) return ["too short"];
+  if (b.readUInt32LE(0) !== 0x46546c67) issues.push("bad magic");
+  if (b.readUInt32LE(4) !== 2) issues.push("not glTF 2");
+  if (b.readUInt32LE(8) !== b.length) issues.push("length mismatch");
+  const jsonLen = b.readUInt32LE(12);
+  if (b.readUInt32LE(16) !== 0x4e4f534a) issues.push("first chunk not JSON");
+  let doc;
+  try { doc = JSON.parse(b.toString("utf8", 20, 20 + jsonLen)); } catch { issues.push("JSON chunk does not parse"); return issues; }
+  const binOff = 20 + jsonLen;
+  if (b.readUInt32LE(binOff + 4) !== 0x004e4942) issues.push("second chunk not BIN");
+  if (b.readUInt32LE(binOff) < doc.buffers[0].byteLength) issues.push("BIN chunk shorter than buffer");
+  return issues;
+}
+
+export function glbJson(b: Buffer): any {
+  return JSON.parse(b.toString("utf8", 20, 20 + b.readUInt32LE(12)));
+}

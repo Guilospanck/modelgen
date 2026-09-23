@@ -1,9 +1,9 @@
+// @ts-nocheck — ported engine; behaviour frozen by test/engine.golden.test.ts
 // Implicit-surface (SDF) modeling: creatures are ONE continuous blended body,
 // not glued-together parts. Primitives (round-cones along a skeleton, spheres,
 // ellipsoids) are combined with a smooth-min so flesh flows into flesh — necks
 // blend into torsos, thighs into hips — then a Surface Nets mesher extracts a
 // single watertight skin with normals taken from the field gradient.
-"use strict";
 
 // ---------- primitives ----------
 // prim = {kind, ...params, k?} — k overrides the field's blend radius locally.
@@ -237,4 +237,4 @@ function surfacePoint(f, start) {
   return null;
 }
 
-module.exports = { roundCone, sphere, ellipsoid, chain, meshField, makeField, fieldGradient, surfacePoint };
+export { roundCone, sphere, ellipsoid, chain, meshField, makeField, fieldGradient, surfacePoint };

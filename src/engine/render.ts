@@ -1,8 +1,9 @@
+// @ts-nocheck — ported engine; behaviour frozen by test/engine.golden.test.ts
 // Software renderer: rasterizes a model to a PNG contact image so the
 // generator's output can be SEEN and judged before it ships. Orthographic
 // two-view (3/4 + profile), z-buffer, Gouraud lighting, texture sampling.
-"use strict";
-const lib = require("./lib");
+import * as lib from "./lib";
+import { run } from "./life/dsl";
 
 const hexRGB = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
@@ -13,6 +14,16 @@ function viewBasis(yawDeg, pitchDeg) {
   const right = [cy, 0, sy];
   const up = [sy * sp, cp, -cy * sp];
   return { right, up, fwd };
+}
+
+// Screen position of a (normalized-space) point in a W×H view, matching renderView's projection.
+function project(p, W, H, yaw, pitch) {
+  const { right, up } = viewBasis(yaw, pitch);
+  const scale = Math.min(W, H) / 2.6;
+  return {
+    x: W / 2 + (p[0] * right[0] + p[1] * right[1] + p[2] * right[2]) * scale,
+    y: H / 2 + 8 - (p[0] * up[0] + p[1] * up[1] + p[2] * up[2]) * scale,
+  };
 }
 
 function renderView(groups, texPix, W, H, yaw, pitch) {
@@ -112,7 +123,6 @@ function preview({ parts, textures }, { W = 340, H = 340, tex = 256, views = VIE
 // Frames of a life program (see life/dsl.js) across its cycle, as PNG bytes:
 // one panel per time in `frames` (seconds), so the motion can be judged.
 function lifePreview({ parts, textures }, prog, { frames = [0.6, 2.8, 5.2, 7.4, 9.9, 11.9, 13.7, 15.1], W = 200, H = 220, tex = 128, yaw = 215, pitch = 12 } = {}) {
-  const { run } = require("./life/dsl");
   const groups = lib.assemble(parts);
   const texPix = {};
   for (const [id, spec] of Object.entries(textures || {})) texPix[id] = lib.paintSkin(spec, tex, true);
@@ -127,4 +137,4 @@ function lifePreview({ parts, textures }, prog, { frames = [0.6, 2.8, 5.2, 7.4, 
   return toPNG(views, W, H);
 }
 
-module.exports = { renderView, toPNG, viewBasis, preview, lifePreview };
+export { renderView, toPNG, viewBasis, preview, lifePreview, project };

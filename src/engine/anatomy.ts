@@ -1,7 +1,7 @@
+// @ts-nocheck — ported engine; behaviour frozen by test/engine.golden.test.ts
 // Shared anatomy toolkit for the per-creature builders.
-"use strict";
-const lib = require("./lib");
-const sdf = require("./sdf");
+import * as lib from "./lib";
+import * as sdf from "./sdf";
 const { uvSphere, tube, slab, wingOutline, place, mirrorX, part } = lib;
 const { roundCone, sphere: sph, ellipsoid, chain, meshField } = sdf;
 
@@ -303,7 +303,7 @@ function coat(P, prims, opts) {
   return placed;
 }
 
-module.exports = {
+export {
   uvSphere, tube, slab, wingOutline, place, mirrorX, part,
   roundCone, sph, ellipsoid, chain, meshField,
   S, both, EYE, eyes, crest, clawsAt, wings, batWings, tailOutline, birdTail,

@@ -1,4 +1,4 @@
-"use strict";
+// @ts-nocheck — ported engine; behaviour frozen by test/engine.golden.test.ts
 // Rigs in shader space (the shipped model: centred, largest dimension 2,
 // +z forward, y up). Built from the model's anchors in model space
 // (head/neck/back/tail/claws/teeth/fins, see anchors.js toModelSpace) and the
@@ -11,7 +11,7 @@
 //               seal, turtle, serpent, kraken, biped); params tune its clips
 //     anchors   { slot: { pos, scale } } in model space, may be {}
 //     override  hand corrections: head {c, r}, neck, legTop, tailRoot
-const lib = require("../lib");
+import * as lib from "../lib";
 
 function stats(groups) {
   const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
@@ -87,4 +87,4 @@ function rig({ name, spec, parts, anchors = {}, override = {} }) {
   return R;
 }
 
-module.exports = { rig };
+export { rig };

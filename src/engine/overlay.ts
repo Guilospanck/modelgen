@@ -1,7 +1,7 @@
-"use strict";
+// @ts-nocheck — ported engine; behaviour frozen by test/engine.golden.test.ts
 // Shared by variants.js and stages.js: vector helpers, area-weighted surface
 // sampling with normals, and a tangent basis at a point.
-const { rng } = require("./lib");
+import { rng } from "./lib";
 
 // ---------- vector bits ----------
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -55,4 +55,4 @@ function basis(n, R) {
 }
 
 
-module.exports = { add, sub, mul, dot, cross, norm, hex, mixc, shade, hash, sampleSurface, basis };
+export { add, sub, mul, dot, cross, norm, hex, mixc, shade, hash, sampleSurface, basis };
