@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import * as YAML from "yaml";
 import { OpError, modelJsonSchema, type Issue } from "../document";
 import * as ops from "../ops";
+import { startMcpServer } from "../mcp/server";
 import { VERSION } from "../version";
 import { parseArgs, UsageError } from "./args";
 import { formatIssues, human } from "./format";
@@ -114,6 +115,7 @@ export async function run(argv: string[], io: IO = defaultIO): Promise<number | 
       case "build": result = ops.buildProject(ws(), { models: P }); failed = result.failed.length > 0; break;
       case "describe": result = ops.describe({ topic: P[0] }); break;
       case "schema": io.out(JSON.stringify(modelJsonSchema(), null, 2) + "\n"); return 0;
+      case "mcp": await startMcpServer(root, allowScripts); return null;
       default: throw new UsageError(`unknown command "${a.command}" (see modelgen --help)`);
     }
     io.out(json ? JSON.stringify(ops.toJson(result), null, 2) + "\n" : human(a.command, result));
