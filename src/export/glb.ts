@@ -1,20 +1,22 @@
-// @ts-nocheck — body ported from gltf.js; Task 7 adds glbScene
 import type { Group, Skin } from "../engine/types";
 
-const hexToLinear = hex => {
+// glTF 2.0 binary (.glb): a node tree with meshes (one primitive per material
+// group), PBR materials, embedded PNG textures. Colors are linear, like usda().
+export type GlbNode = { name: string; translation?: number[]; rotation?: number[]; scale?: number[]; groups?: Group[]; children?: GlbNode[] };
+
+const hexToLinear = (hex: string) => {
   const c = parseInt(hex.slice(1), 16);
-  const f = v => Math.pow(v / 255, 2.2);
+  const f = (v: number) => Math.pow(v / 255, 2.2);
   return [f((c >> 16) & 255), f((c >> 8) & 255), f(c & 255)];
 };
 
 const FLOAT = 5126, UINT = 5125, ARRAY_BUFFER = 34962, ELEMENT_ARRAY_BUFFER = 34963, REPEAT = 10497;
 
-// groups: assemble() output; skins: { texId: { diffuse: PNG, normal: PNG } }
-function glb(groups, skins = {}) {
-  const chunks = [];
+export function glbScene(roots: GlbNode[], skins: Record<string, Skin> = {}): Buffer {
+  const chunks: Buffer[] = [];
   let byteLength = 0;
-  const bufferViews = [], accessors = [];
-  const view = (buf, target) => {
+  const bufferViews: any[] = [], accessors: any[] = [];
+  const view = (buf: Buffer, target?: number) => {
     const pad = (4 - (byteLength % 4)) % 4;
     if (pad) { chunks.push(Buffer.alloc(pad)); byteLength += pad; }
     bufferViews.push({ buffer: 0, byteOffset: byteLength, byteLength: buf.length, ...(target ? { target } : {}) });
@@ -22,10 +24,10 @@ function glb(groups, skins = {}) {
     byteLength += buf.length;
     return bufferViews.length - 1;
   };
-  const vec = (rows, n, withBounds) => {
+  const vec = (rows: number[][], n: number, withBounds = false) => {
     const a = new Float32Array(rows.length * n);
     rows.forEach((r, i) => { for (let k = 0; k < n; k++) a[i * n + k] = r[k]; });
-    const acc = { bufferView: view(Buffer.from(a.buffer), ARRAY_BUFFER), componentType: FLOAT, count: rows.length, type: n === 3 ? "VEC3" : "VEC2" };
+    const acc: any = { bufferView: view(Buffer.from(a.buffer), ARRAY_BUFFER), componentType: FLOAT, count: rows.length, type: n === 3 ? "VEC3" : "VEC2" };
     if (withBounds) {
       // bounds of the float32 values actually stored (validators compare exactly)
       const mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
@@ -36,11 +38,10 @@ function glb(groups, skins = {}) {
     accessors.push(acc);
     return accessors.length - 1;
   };
-  const unit = v => { const l = Math.hypot(v[0], v[1], v[2]); return l > 1e-8 ? [v[0] / l, v[1] / l, v[2] / l] : [0, 1, 0]; };
+  const unit = (v: number[]) => { const l = Math.hypot(v[0], v[1], v[2]); return l > 1e-8 ? [v[0] / l, v[1] / l, v[2] / l] : [0, 1, 0]; };
 
-  // Textures: one image + texture per PNG, shared across groups using the same skin.
-  const images = [], textures = [], texIndex = {};
-  const addTexture = (key, png) => {
+  const images: any[] = [], textures: any[] = [], texIndex: Record<string, number> = {};
+  const addTexture = (key: string, png: Buffer) => {
     if (texIndex[key] === undefined) {
       images.push({ bufferView: view(png), mimeType: "image/png", name: key });
       textures.push({ sampler: 0, source: images.length - 1 });
@@ -49,10 +50,10 @@ function glb(groups, skins = {}) {
     return texIndex[key];
   };
 
-  const materials = [], primitives = [];
-  groups.forEach((g, gi) => {
-    const pbr = { metallicFactor: g.metal, roughnessFactor: g.rough };
-    const mat = { name: `mat${gi}`, pbrMetallicRoughness: pbr, doubleSided: true };
+  const materials: any[] = [], meshes: any[] = [], nodes: any[] = [];
+  const primitive = (g: Group) => {
+    const pbr: any = { metallicFactor: g.metal, roughnessFactor: g.rough };
+    const mat: any = { name: `mat${materials.length}`, pbrMetallicRoughness: pbr, doubleSided: true };
     if (g.tex && skins[g.tex]) {
       pbr.baseColorFactor = [1, 1, 1, g.opacity];
       pbr.baseColorTexture = { index: addTexture(g.tex, skins[g.tex].diffuse) };
@@ -63,42 +64,48 @@ function glb(groups, skins = {}) {
     if (g.emissive) mat.emissiveFactor = hexToLinear(g.emissive);
     if (g.opacity < 1) mat.alphaMode = "BLEND";
     materials.push(mat);
-
     const attributes = { POSITION: vec(g.pos, 3, true), NORMAL: vec(g.nrm.map(unit), 3), TEXCOORD_0: vec(g.uv, 2) };
-    const idx = Buffer.from(new Uint32Array(g.idx).buffer);
-    accessors.push({ bufferView: view(idx, ELEMENT_ARRAY_BUFFER), componentType: UINT, count: g.idx.length, type: "SCALAR" });
-    primitives.push({ attributes, indices: accessors.length - 1, material: gi });
-  });
+    accessors.push({ bufferView: view(Buffer.from(new Uint32Array(g.idx).buffer), ELEMENT_ARRAY_BUFFER), componentType: UINT, count: g.idx.length, type: "SCALAR" });
+    return { attributes, indices: accessors.length - 1, material: materials.length - 1 };
+  };
+  const addNode = (n: GlbNode): number => {
+    const node: any = { name: n.name };
+    const index = nodes.push(node) - 1;
+    if (n.translation && n.translation.some(v => v !== 0)) node.translation = n.translation;
+    if (n.rotation && (n.rotation[0] || n.rotation[1] || n.rotation[2])) node.rotation = n.rotation;
+    if (n.scale && n.scale.some(v => v !== 1)) node.scale = n.scale;
+    if (n.groups && n.groups.length) node.mesh = meshes.push({ primitives: n.groups.map(primitive) }) - 1;
+    if (n.children && n.children.length) node.children = n.children.map(addNode);
+    return index;
+  };
+  const sceneNodes = roots.map(addNode);
 
-  const pad4 = n => (4 - (n % 4)) % 4;
+  const pad4 = (n: number) => (4 - (n % 4)) % 4;
   const tail = pad4(byteLength);
   if (tail) { chunks.push(Buffer.alloc(tail)); byteLength += tail; }
-
   const doc = {
     asset: { version: "2.0", generator: "modelgen" },
     scene: 0,
-    scenes: [{ nodes: [0] }],
-    nodes: [{ name: "Root", mesh: 0 }],
-    meshes: [{ primitives }],
-    materials,
-    accessors,
-    bufferViews,
+    scenes: [{ nodes: sceneNodes }],
+    nodes, meshes, materials, accessors, bufferViews,
     buffers: [{ byteLength }],
     ...(images.length ? { images, textures, samplers: [{ wrapS: REPEAT, wrapT: REPEAT }] } : {}),
   };
   let json = Buffer.from(JSON.stringify(doc), "utf8");
   json = Buffer.concat([json, Buffer.alloc(pad4(json.length), 0x20)]);
   const bin = Buffer.concat(chunks);
-
   const header = Buffer.alloc(12);
-  header.writeUInt32LE(0x46546c67, 0); // "glTF"
+  header.writeUInt32LE(0x46546c67, 0);
   header.writeUInt32LE(2, 4);
   header.writeUInt32LE(12 + 8 + json.length + 8 + bin.length, 8);
-  const chunkHead = (len, type) => { const b = Buffer.alloc(8); b.writeUInt32LE(len, 0); b.writeUInt32LE(type, 4); return b; };
+  const chunkHead = (len: number, type: number) => { const b = Buffer.alloc(8); b.writeUInt32LE(len, 0); b.writeUInt32LE(type, 4); return b; };
   return Buffer.concat([header, chunkHead(json.length, 0x4e4f534a), json, chunkHead(bin.length, 0x004e4942), bin]);
 }
 
-export { glb };
+// Flat model: one node, one mesh (the pre-hierarchy layout).
+export function glb(groups: Group[], skins: Record<string, Skin> = {}): Buffer {
+  return glbScene([{ name: "Root", groups }], skins);
+}
 
 // glTF 2.0 binary: header, JSON chunk, BIN chunk, sizes consistent.
 export function validateGlb(b: Buffer): string[] {
