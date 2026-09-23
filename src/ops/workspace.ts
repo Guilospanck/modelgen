@@ -51,7 +51,13 @@ export function modelFile(ws: Workspace, name: string): string | undefined {
   return undefined;
 }
 
+export const MODEL_NAME_RE = /^[a-z0-9][a-z0-9_-]*$/;
+
+// Model names reach file paths, so anything outside the name grammar is refused before lookup.
 export function requireModelFile(ws: Workspace, name: string): string {
+  if (typeof name !== "string" || !MODEL_NAME_RE.test(name)) throw new OpError(`"${name}" is not a valid model name`, [{
+    severity: "error", code: "invalid_name", message: `"${name}" is not a valid model name`, hint: "use lowercase letters, digits, _ and -",
+  }]);
   const f = modelFile(ws, name);
   if (f) return f;
   const known = listModelNames(ws);
