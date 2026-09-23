@@ -1,0 +1,19 @@
+modelgen: 1
+name: lantern
+materials:
+  paper: {color: "#e8a13a", roughness: 0.8, emissive: "#6a3a08", texture: {pattern: stripes, color: "#c4761f", scale: 6, seed: 3}}
+  iron: {color: "#2a2a2a", roughness: 0.3, metalness: 0.8}
+parts:
+  - name: base
+    box: {size: [0.4, 0.06, 0.4]}
+    material: iron
+  - name: body
+    lathe: {profile: [[0, 0], [0.2, 0.1], [0.25, 0.4], [0.15, 0.7], [0, 0.72]], segments: 32}
+    material: paper
+  - name: cap
+    cylinder: {radius: [0.06, 0.1], height: 0.06}
+    position: [0, 0.73, 0]
+    material: iron
+  - name: handle
+    tube: {path: [[-0.08, 0.74, 0], [0, 0.9, 0], [0.08, 0.74, 0]], radius: 0.012}
+    material: iron

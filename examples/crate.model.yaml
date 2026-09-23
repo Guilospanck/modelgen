@@ -1,0 +1,26 @@
+modelgen: 1
+name: crate
+materials:
+  wood: {color: "#9c6b3c", roughness: 0.9, texture: {pattern: mottle, color: "#7a4f2a", scale: 3}}
+  metal: {color: "#6d6f73", metalness: 0.9, roughness: 0.35}
+parts:
+  - name: box
+    box: {size: [0.8, 0.6, 0.6]}
+    position: [0, 0.3, 0]
+    material: wood
+  - name: bands
+    group:
+      parts:
+        - name: band_left
+          box: {size: [0.04, 0.62, 0.62]}
+          position: [-0.3, 0.3, 0]
+          material: metal
+        - name: band_right
+          box: {size: [0.04, 0.62, 0.62]}
+          position: [0.3, 0.3, 0]
+          material: metal
+  - name: pull
+    torus: {radius: 0.08, tube: 0.012}
+    position: [0, 0.3, 0.31]
+    rotation: [1.5708, 0, 0]
+    material: metal

@@ -1,0 +1,6 @@
+# The examples are a modelgen project: `modelgen build --project examples`
+models: .
+previews: previews
+outputs:
+  - dir: out
+    formats: [glb, usdz]

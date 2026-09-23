@@ -41,6 +41,7 @@
   "devDependencies": {
     "@types/bun": "1.4.2",
     "@types/node": "26.6.2",
+    "gltf-validator": "2.0.0-dev.3.10",
     "typescript": "7.0.2"
   },
   "dependencies": {

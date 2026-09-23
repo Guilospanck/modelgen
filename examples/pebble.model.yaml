@@ -1,0 +1,5 @@
+modelgen: 1
+name: pebble
+parts:
+  - name: stone
+    script: {module: scripts/pebble.js, params: {bumps: 6, seed: 4}}
