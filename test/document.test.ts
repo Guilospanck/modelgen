@@ -74,3 +74,18 @@ test("JSON Schema is generated and covers nested groups", () => {
   expect(s).toContain('"group"');
   expect(s).toContain('"lathe"');
 });
+
+test("union errors get a hint that matches the field", () => {
+  const issue = (raw: unknown) => validateDocument(raw).issues[0];
+  const cyl = issue(withParts([{ name: "a", cylinder: { radius: "x", height: 1 } }]));
+  expect(cyl.path).toBe("parts[0].cylinder.radius");
+  expect(cyl.hint).toContain("[number, number]");
+  expect(cyl.hint).not.toContain("blob");
+  const scale = issue(withParts([{ name: "a", box: { size: [1, 1, 1] }, scale: "big" }]));
+  expect(scale.path).toBe("parts[0].scale");
+  expect(scale.hint).toContain("[x, y, z]");
+  expect(scale.hint).not.toContain("blob");
+  const blob = issue(withParts([{ name: "a", blob: { shapes: [{ cube: { size: 1 } }] } }]));
+  expect(blob.path).toContain("blob");
+  expect(blob.hint).toContain("blob shapes are one of");
+});

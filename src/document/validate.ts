@@ -12,10 +12,19 @@ const HINTS: Record<string, string> = {
   unrecognized_keys: "remove the key or fix its spelling (`modelgen describe shapes` lists every field)",
   too_small: "the value is below the minimum allowed",
   too_big: "the value is above the maximum allowed",
-  invalid_union: "blob shapes are one of: sphere, ellipsoid, capsule, chain",
   invalid_format: "see `modelgen describe conventions`",
   invalid_value: "see `modelgen describe` for the allowed values",
 };
+
+// zod unions (blob shapes, radius pairs, scale) all report "Invalid input"; pick a hint for the field.
+function unionHint(path: readonly PropertyKey[]): string {
+  const keys = path.filter(k => typeof k === "string");
+  const last = keys[keys.length - 1];
+  if (keys.includes("blob")) return "blob shapes are one of: sphere, ellipsoid, capsule, chain";
+  if (last === "scale") return "expected a number or [x, y, z]";
+  if (last === "radius" || last === "radii") return "expected a number or a [number, number] pair";
+  return "the value doesn't match any allowed form (`modelgen describe shapes`)";
+}
 
 export function validateDocument(raw: unknown): { doc?: ModelDoc; issues: Issue[] } {
   const r = DocSchema.safeParse(raw);
@@ -24,7 +33,7 @@ export function validateDocument(raw: unknown): { doc?: ModelDoc; issues: Issue[
       const where = formatPath(i.path);
       const keys = (i as { keys?: string[] }).keys;
       const what = keys ? `unknown key${keys.length > 1 ? "s" : ""} ${keys.map(k => `"${k}"`).join(", ")}` : i.message;
-      return { severity: "error", code: "schema", path: where, message: `${where}: ${what}`, hint: HINTS[i.code] };
+      return { severity: "error", code: "schema", path: where, message: `${where}: ${what}`, hint: i.code === "invalid_union" ? unionHint(i.path) : HINTS[i.code] };
     });
     return { issues };
   }
