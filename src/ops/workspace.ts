@@ -35,8 +35,8 @@ export function openWorkspace(root: string, opts: { allowScripts?: boolean } = {
   }
   return {
     root,
-    modelsDir: join(root, config?.models ?? "models"),
-    previewsDir: join(root, config?.previews ?? "previews"),
+    modelsDir: resolve(root, config?.models ?? "models"),
+    previewsDir: resolve(root, config?.previews ?? "previews"),
     stateDir: join(root, ".modelgen"),
     config,
     allowScripts: opts.allowScripts ?? false,
@@ -82,7 +82,8 @@ export function listModelNames(ws: Workspace): string[] {
 const globRe = (p: string) => new RegExp("^" + p.split("*").map(s => s.replace(/[.+?^${}()|[\]\\]/g, "\\$&")).join(".*") + "$");
 
 export function selectModels(names: string[], patterns: string[] = ["*"]): string[] {
-  const include = patterns.filter(p => !p.startsWith("!")).map(globRe);
+  const includes = patterns.filter(p => !p.startsWith("!"));
+  const include = (includes.length ? includes : ["*"]).map(globRe);
   const exclude = patterns.filter(p => p.startsWith("!")).map(p => globRe(p.slice(1)));
   return names.filter(n => include.some(r => r.test(n)) && !exclude.some(r => r.test(n)));
 }

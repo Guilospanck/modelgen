@@ -95,6 +95,9 @@ test("describe covers every topic and the schema", () => {
   expect(describeOp({ topic: "schema" }).schema).toBeDefined();
   expect(describeOp().topic).toBe("overview");
   expect(code(() => describeOp({ topic: "kittens" }))).toBe("unknown_topic");
+  const patterns = describeOp({ topic: "patterns" }).text;
+  for (const p of ["fur", "stripes", "runes", "belly", "seed", "bump"]) expect(patterns).toContain(p);
+  expect(describeOp().text).toContain("patterns");
 });
 
 // A cetacean without a `rate` param emits `undefined` into the Metal source, which fails the life lint.

@@ -8,7 +8,7 @@ import { VERSION } from "../version";
 const INSTRUCTIONS = `modelgen builds 3D models (GLB, USDZ) from validated operations.
 Workflow: create_model → edit_model (batches of ops, applied atomically) → capture (look at the PNG and fix every issue) → export.
 Conventions: meters, +y up, +z front, radians, #rrggbb colors. Group origins are pivots.
-Call describe (topics: shapes, materials, ops, conventions, project, scripts, schema) before building if unsure.
+Call describe (topics: shapes, materials, patterns, ops, conventions, project, scripts, schema) before building if unsure.
 Keep parts touching: a floating part is an error that blocks export.`;
 
 type Shape = Record<string, z.ZodTypeAny>;

@@ -6,7 +6,7 @@ import { opError } from "./load";
 const TEXT: Record<string, string> = {
   overview: `modelgen builds 3D models from a YAML document and exports GLB and USDZ.
 Loop: create_model → edit_model (batches of ops) → capture (look at the PNG, read issues) → fix → export.
-Topics: ${["shapes", "materials", "ops", "conventions", "project", "scripts", "schema"].join(", ")}.`,
+Topics: ${["shapes", "materials", "patterns", "ops", "conventions", "project", "scripts", "schema"].join(", ")}.`,
   conventions: `Units are meters. +y is up, +z is the model's front, x is left/right.
 Rotations are radians, XYZ order (applied x, then y, then z). Colors are #rrggbb.
 A group's origin is the pivot of its children. Part names are unique within a model.
@@ -30,7 +30,23 @@ Shapes (${SHAPE_KEYS.join(", ")}):
 surface: true exempts detail (fur, scales) from the floating check; bump adds noise displacement.`,
   materials: `materials: { <name>: { color, roughness? (0.7), metalness? (0), opacity? (1), emissive?, texture? } }
 texture: { pattern, color?, belly?, scale?, seed?, bump? } — procedural diffuse + normal map.
-Patterns: ${PATTERNS.join(", ")}. Parts refer to materials by name.`,
+Patterns: ${PATTERNS.join(", ")} (topic patterns). Parts refer to materials by name.`,
+  patterns: `texture: { pattern, color?, belly?, scale?, seed?, bump? } on a material paints a procedural diffuse + normal map.
+  pattern — one of ${PATTERNS.join(", ")}
+  color   — the pattern's colour (default: a darker shade of the material color)
+  belly   — an underside colour blended into one end of the texture
+  scale   — pattern frequency (bigger = finer detail)
+  seed    — integer; changes the random layout
+  bump    — normal-map strength (0 = flat)
+Patterns:
+  fur       layered pelt: directional strands and fine grain
+  feathers  shingled rows of feathers with barb streaks
+  scales    domed scales with dark rims and weathering
+  spots     stamped ellipses in the pattern colour
+  stripes   bands in the pattern colour
+  mottle    big soft two-tone patches (seals, stone, weathered hide)
+  flame     living fire: gold → orange → crimson tongues
+  runes     sparse glyph strokes over a soft mottled base`,
   ops: `edit_model takes up to ${MAX_OPS} ops, applied in order as one step (all or nothing). Later ops can refer to parts added earlier in the batch.
   { add: { parent?, part } }
   { update: { name, set: { position?, rotation?, scale?, material?, <shape>: {...fields to change}, <key>: null to unset } } }

@@ -49,3 +49,16 @@ test("selectModels with wildcards and exclusions", () => {
   expect(selectModels(names, ["cosmetic_*"])).toEqual(["cosmetic_hat", "cosmetic_scarf"]);
   expect(selectModels(names, ["*", "!cosmetic_*"])).toEqual(["dragon", "horse"]);
 });
+
+test("absolute models and previews dirs are used as given", () => {
+  const root = tmp(), elsewhere = tmp();
+  writeFileSync(join(root, "modelgen.yaml"), `models: ${join(elsewhere, "m")}\npreviews: ${join(elsewhere, "p")}\n`);
+  const ws = openWorkspace(root);
+  expect(ws.modelsDir).toBe(join(elsewhere, "m"));
+  expect(ws.previewsDir).toBe(join(elsewhere, "p"));
+});
+
+test("selectModels with only exclusions includes everything else", () => {
+  expect(selectModels(["cosmetic_hat", "dragon", "horse"], ["!cosmetic_*"])).toEqual(["dragon", "horse"]);
+  expect(selectModels(["dragon"], [])).toEqual(["dragon"]);
+});
