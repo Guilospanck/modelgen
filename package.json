@@ -1,0 +1,17 @@
+{
+  "name": "@guilospanck/modelgen",
+  "version": "0.1.0",
+  "description": "Procedural 3D models from code: mesh + SDF sculpting, painted textures, USDZ and glTF/GLB export, cosmetic anchors, idle-animation shaders. Zero dependencies.",
+  "license": "MIT",
+  "author": "Guilherme Pereira",
+  "repository": { "type": "git", "url": "git+https://github.com/Guilospanck/modelgen.git" },
+  "keywords": ["3d", "procedural", "usdz", "gltf", "glb", "mesh", "sdf", "generator"],
+  "engines": { "node": ">=18" },
+  "main": "index.js",
+  "bin": { "modelgen": "cli.js" },
+  "files": ["*.js", "life/*.js", "README.md", "LICENSE"],
+  "scripts": {
+    "test": "node --test",
+    "example": "node cli.js build examples --out out --format usdz,glb && node cli.js render examples --out out && node cli.js anchors examples --config examples/anchors.config.json --out out/anchors.json && node cli.js life examples --config examples/life.config.json --anchors out/anchors.json --out out/life.json --previews out"
+  }
+}
