@@ -15,6 +15,11 @@ export function readModel(ws: Workspace, name: string): { file: string; text: st
   syncHandEdits(ws, name, text);
   const { doc, issues } = validateDocument(parseModelText(text, file));
   if (!doc) throw new OpError(`${name} is not a valid model`, issues);
+  // Outputs are named after doc.name, so a copied file must not write over its original's files.
+  if (doc.name !== name) {
+    const message = `name: "${doc.name}" doesn't match the file name "${name}"`;
+    throw new OpError(`${name} is not a valid model`, [{ severity: "error", code: "schema", path: "name", message, hint: `rename the file or set name: ${name}` }]);
+  }
   return { file, text, doc };
 }
 

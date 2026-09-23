@@ -160,3 +160,11 @@ test("build: a hand-written bad life fails only that model", () => {
   expect(r.failed[0].issues[0].code).toBe("schema");
   expect(existsSync(join(root, "out/lantern.glb"))).toBe(true);
 });
+
+test("a copied model file keeps the old name: export and capture refuse it instead of overwriting", () => {
+  const w = lantern(), out = join(w.root, "dist");
+  writeFileSync(join(w.modelsDir, "lantern2.model.yaml"), readFileSync(join(w.modelsDir, "lantern.model.yaml")));
+  expect(code(() => exportModel(w, { model: "lantern2", out }))).toBe("schema");
+  expect(code(() => capture(w, { model: "lantern2", size: 64 }))).toBe("schema");
+  expect(existsSync(out)).toBe(false);
+});

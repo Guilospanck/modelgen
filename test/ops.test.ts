@@ -140,12 +140,17 @@ test("malformed parts mid-batch fail as invalid_op, not a crash, and change noth
   expect(historyDepth(w, "m").undo).toBe(0);
 });
 
-test("inspect reports the requested model name, not the file's internal name", () => {
+test("a model whose name doesn't match its file name is refused", () => {
   const w = ws();
   const { path } = createModel(w, { name: "foo" });
   writeFileSync(path, readFileSync(path, "utf8").replace("name: foo", "name: bar"));
-  expect(readFileSync(path, "utf8")).toContain("name: bar");
-  expect(inspectModel(w, { model: "foo" }).model).toBe("foo");
+  let err: unknown;
+  try { inspectModel(w, { model: "foo" }); } catch (e) { err = e; }
+  expect(err).toBeInstanceOf(OpError);
+  expect((err as OpError).issues[0]).toMatchObject({
+    code: "schema", path: "name",
+    message: 'name: "bar" doesn\'t match the file name "foo"', hint: "rename the file or set name: foo",
+  });
 });
 
 test("duplicating an existing script part needs --allow-scripts", () => {
