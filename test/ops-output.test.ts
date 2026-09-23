@@ -97,12 +97,12 @@ test("describe covers every topic and the schema", () => {
   expect(code(() => describeOp({ topic: "kittens" }))).toBe("unknown_topic");
 });
 
-// A cetacean's `rate` is spliced into the Metal source, so a non-numeric rate fails the life lint.
+// A cetacean without a `rate` param emits `undefined` into the Metal source, which fails the life lint.
 const badLife = (w: ReturnType<typeof openWorkspace>, name = "whale") => {
   createModel(w, { name });
   editModel(w, { model: name, ops: [
     { add: { part: { name: "body", sphere: { radius: 0.5 }, position: [0, 0.5, 0] } } },
-    { set: { normalize: true, anchors: { slots: ["head"] }, life: { plan: "cetacean", params: { rate: "bogus" } } } },
+    { set: { normalize: true, anchors: { slots: ["head"] }, life: { plan: "cetacean" } } },
   ] });
 };
 
@@ -130,4 +130,33 @@ test("build skips a model whose life fails and writes nested aggregates", () => 
   expect(Object.keys(JSON.parse(readFileSync(join(root, "ios/meta/anchors.json"), "utf8")))).toEqual(["lantern"]);
   expect(JSON.parse(readFileSync(join(root, "ios/meta/life.json"), "utf8"))).toEqual({});
   expect(listModels(w).models.find(m => m.name === "whale")?.exportedAt).toBeUndefined();
+});
+
+test("life params can't carry text into the Metal source", () => {
+  const w = openWorkspace(tmp());
+  createModel(w, { name: "whale" });
+  let err: unknown;
+  try {
+    editModel(w, { model: "whale", ops: [
+      { add: { part: { name: "body", sphere: { radius: 0.5 }, position: [0, 0.5, 0] } } },
+      { set: { normalize: true, life: { plan: "cetacean", params: { rate: "(2.0)" } } } },
+    ] });
+  } catch (e) { err = e; }
+  expect(err).toBeInstanceOf(OpError);
+  expect((err as OpError).issues.some(i => i.path === "life.params.rate")).toBe(true);
+});
+
+test("build: a hand-written bad life fails only that model", () => {
+  const root = tmp();
+  writeFileSync(join(root, "modelgen.yaml"), "outputs:\n  - dir: out\n    formats: [glb]\n    life: life.json\n");
+  const w = lantern(root);
+  writeFileSync(join(w.modelsDir, "whale.model.yaml"), [
+    "modelgen: 1", "name: whale", "normalize: true",
+    "parts:", "  - name: body", "    sphere: { radius: 0.5 }",
+    "life:", "  plan: quad", "  override: { legTop: abc, head: 5 }", "",
+  ].join("\n"));
+  const r = buildProject(w);
+  expect(r.failed.map(f => f.model)).toEqual(["whale"]);
+  expect(r.failed[0].issues[0].code).toBe("schema");
+  expect(existsSync(join(root, "out/lantern.glb"))).toBe(true);
 });

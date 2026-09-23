@@ -89,3 +89,24 @@ test("union errors get a hint that matches the field", () => {
   expect(blob.path).toContain("blob");
   expect(blob.hint).toContain("blob shapes are one of");
 });
+
+test("life params are numbers or booleans; only signature is a (lowercase word) string", () => {
+  const life = (l: object) => withParts([{ name: "a", box: { size: [1, 1, 1] } }], { normalize: true, life: l });
+  expect(validateDocument(life({ plan: "cetacean", params: { rate: 2.4, bite: true, signature: "bow" } })).issues).toEqual([]);
+  const str = validateDocument(life({ plan: "cetacean", params: { rate: "(2.0)" } }));
+  expect(str.doc).toBeUndefined();
+  expect(str.issues[0]).toMatchObject({ code: "schema", path: "life.params.rate" });
+  expect(validateDocument(life({ plan: "quad", params: { signature: "bow); x" } })).issues[0].path).toBe("life.params.signature");
+  expect(validateDocument(life({ plan: "quad", params: { gait: Infinity } })).doc).toBeUndefined();
+  expect(validateDocument(life({ plan: "quad", params: { stride: [1] } })).doc).toBeUndefined();
+});
+
+test("life override has a fixed shape", () => {
+  const life = (override: object) => withParts([{ name: "a", box: { size: [1, 1, 1] } }], { normalize: true, life: { plan: "quad", override } });
+  expect(validateDocument(life({ head: { c: [0, 0.6, 0], r: [0.3, 0.3, 0.3] }, neck: [0, 0.4, 0], tailRoot: [0, 0.4, -0.5], legTop: 0.3 })).issues).toEqual([]);
+  expect(validateDocument(life({ legTop: "abc" })).issues[0].path).toBe("life.override.legTop");
+  expect(validateDocument(life({ head: 5 })).issues[0].path).toBe("life.override.head");
+  expect(validateDocument(life({ legTop: 2 })).doc).toBeUndefined();
+  expect(validateDocument(life({ head: { c: [0, 0, 0], r: [0.3, 0, 0.3] } })).doc).toBeUndefined();
+  expect(validateDocument(life({ tail: [0, 0, 0] })).issues[0].message).toContain('unknown key "tail"');
+});

@@ -43,8 +43,12 @@ export type ModelDoc = {
   materials?: Record<string, Material>;
   parts: Part[];
   anchors?: { slots: Slot[]; overrides?: Partial<Record<Slot, { pos: Vec3; scale: number }>> };
-  life?: { plan: (typeof PLANS)[number]; params?: Record<string, unknown>; override?: Record<string, unknown> };
+  life?: { plan: (typeof PLANS)[number]; params?: LifeParams; override?: LifeOverride };
 };
+// Life values are spliced into generated Metal source, so only numbers and booleans are allowed,
+// plus `signature`, a lowercase word the clips only switch on.
+export type LifeParams = { signature?: string; [key: string]: number | boolean | string | undefined };
+export type LifeOverride = { head?: { c: Vec3; r: Vec3 }; neck?: Vec3; tailRoot?: Vec3; legTop?: number };
 
 const pos = z.number().positive();
 const vec2 = z.tuple([z.number(), z.number()]);
@@ -102,6 +106,15 @@ export const PartSchema = z.lazy(() => z.object({
   script: z.object({ module: z.string().min(1), params: params.optional() }).strict().optional(),
 }).strict()) as unknown as z.ZodType<Part>;
 
+const LifeParamsSchema = z.object({ signature: z.string().regex(/^[a-z_]+$/, { message: "expected a lowercase word like bow" }).optional() })
+  .catchall(z.union([z.number().finite(), z.boolean()]));
+const LifeOverrideSchema = z.object({
+  head: z.object({ c: vec3, r: z.tuple([pos, pos, pos]) }).strict(),
+  neck: vec3,
+  tailRoot: vec3,
+  legTop: z.number().min(0).max(1),
+}).partial().strict();
+
 const AnchorSchema = z.object({ pos: vec3, scale: pos }).strict();
 
 export const DocSchema = z.object({
@@ -112,5 +125,5 @@ export const DocSchema = z.object({
   materials: z.record(z.string(), MaterialSchema).optional(),
   parts: z.array(PartSchema),
   anchors: z.object({ slots: z.array(z.enum(SLOTS)).min(1), overrides: z.partialRecord(z.enum(SLOTS), AnchorSchema).optional() }).strict().optional(),
-  life: z.object({ plan: z.enum(PLANS), params: params.optional(), override: params.optional() }).strict().optional(),
+  life: z.object({ plan: z.enum(PLANS), params: LifeParamsSchema.optional(), override: LifeOverrideSchema.optional() }).strict().optional(),
 }).strict() as unknown as z.ZodType<ModelDoc>;

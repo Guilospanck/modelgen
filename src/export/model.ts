@@ -84,7 +84,13 @@ export function modelLife(doc: ModelDoc, flat: FlatPart[], anchors: Record<strin
   { entry: { plan: string; metal: string }; problems: string[] } | undefined {
   if (!doc.life) return undefined;
   const spec = { plan: doc.life.plan, ...(doc.life.params ?? {}) };
-  const R = rig({ name: doc.name, spec, parts: flat.map(f => f.part), anchors: anchors ?? {}, override: doc.life.override ?? {} });
-  const metal: string = emit(program(R));
+  let metal: string;
+  try {
+    const R = rig({ name: doc.name, spec, parts: flat.map(f => f.part), anchors: anchors ?? {}, override: doc.life.override ?? {} });
+    metal = emit(program(R));
+  } catch (e) {
+    const message = `life program failed: ${(e as Error)?.message ?? String(e)}`;
+    throw new OpError(`${doc.name}: ${message}`, [{ severity: "error", code: "life", message, path: "life" }]);
+  }
   return { entry: { plan: doc.life.plan, metal }, problems: lint(metal) };
 }

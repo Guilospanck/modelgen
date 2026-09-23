@@ -4,7 +4,7 @@ import { compileModel, flatten } from "../src/scene/compile";
 import { exportModelFiles, modelAnchors, modelLife } from "../src/export/model";
 import { glbJson, validateGlb } from "../src/export/glb";
 import { readUsda, parseUsdaPoints, validateUsdz } from "../src/export/usdz";
-import type { ModelDoc } from "../src/document";
+import { OpError, type ModelDoc } from "../src/document";
 
 const doc = (extra: Partial<ModelDoc> = {}): ModelDoc => ({
   modelgen: 1, name: "lamp",
@@ -93,4 +93,13 @@ test("anchors (with overrides) and life programs", () => {
   expect(life.entry.plan).toBe("quad");
   expect(life.entry.metal.length).toBeGreaterThan(100);
   expect(life.problems).toEqual([]);
+});
+
+test("a life rig that crashes becomes an OpError with code life", () => {
+  const d = { ...doc(), normalize: true, anchors: { slots: ["head"] }, life: { plan: "quad", override: { head: 5 } } } as unknown as ModelDoc;
+  const flat = flatten(compiled(d).nodes);
+  let err: unknown;
+  try { modelLife(d, flat, modelAnchors(d, flat)); } catch (e) { err = e; }
+  expect(err).toBeInstanceOf(OpError);
+  expect((err as OpError).issues[0].code).toBe("life");
 });
