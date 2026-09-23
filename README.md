@@ -31,7 +31,13 @@ claude mcp add modelgen -- modelgen mcp
 Claude Desktop, Cursor and other MCP clients (`mcpServers` config):
 
 ```json
-{ "modelgen": { "command": "modelgen", "args": ["mcp", "--project", "/path/to/project"] } }
+{ "mcpServers": { "modelgen": { "command": "modelgen", "args": ["mcp", "--project", "/path/to/project"] } } }
+```
+
+Without installing it, through npx:
+
+```json
+{ "mcpServers": { "modelgen": { "command": "npx", "args": ["-y", "@guilospanck/modelgen", "mcp", "--project", "/path/to/project"] } } }
 ```
 
 Then ask for a model. The agent will create it, add parts, capture renders to
@@ -39,7 +45,7 @@ check its work and export it.
 
 | tool | what it does |
 |------|--------------|
-| `describe` | explains shapes, materials, edit ops, conventions, project config |
+| `describe` | explains shapes, materials, texture patterns, edit ops, conventions, project config |
 | `create_model` | new empty model (or a copy of another) |
 | `list_models` | models in the project |
 | `inspect_model` | parts, materials, world-space bounds |
@@ -61,8 +67,9 @@ modelgen build                    # every output in modelgen.yaml
 modelgen describe shapes          # reference for shapes, materials, ops...
 ```
 
-Every command takes `--json` for machine-readable output and `--project <dir>`.
-Exit codes: 0 ok, 1 the model has problems, 2 bad usage.
+Every command takes `--project <dir>`. Most take `--json` for machine-readable
+output (`schema` always prints JSON; `mcp` ignores it).
+Exit codes: 0 ok, 1 the model has problems or the operation failed, 2 bad usage.
 
 ## Model files
 
