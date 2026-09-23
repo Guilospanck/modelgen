@@ -1,9 +1,11 @@
 import { test, expect, beforeAll, afterAll } from "bun:test";
-import { existsSync, mkdtempSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { createServer } from "../src/mcp/server";
 
 const project = mkdtempSync(join(tmpdir(), "modelgen-mcp-"));
 const client = new Client({ name: "test", version: "0" });
@@ -51,4 +53,23 @@ test("errors come back as isError with issues", async () => {
   const s = await call("edit_model", { model: "lantern", ops: [{ add: { part: { name: "s", script: { module: "x.js" } } } }] });
   expect(s.json.issues[0].code).toBe("scripts_disabled");
   expect((await call("describe", { topic: "shapes" })).json.text).toContain("lathe");
+});
+
+test("unexpected errors come back as isError with an internal issue", async () => {
+  const broken = mkdtempSync(join(tmpdir(), "modelgen-mcp-broken-"));
+  mkdirSync(join(broken, "modelgen.yaml")); // a directory where the config file should be
+  const [a, b] = InMemoryTransport.createLinkedPair();
+  const c = new Client({ name: "test", version: "0" });
+  await Promise.all([createServer(broken, false).connect(a), c.connect(b)]);
+  const r: any = await c.callTool({ name: "list_models", arguments: {} });
+  expect(r.isError).toBe(true);
+  const json = JSON.parse(r.content[0].text);
+  expect(json.error).toBeDefined();
+  expect(json.issues[0].code).toBe("internal");
+  await c.close();
+});
+
+test("only describe is read-only", async () => {
+  const tools = (await client.listTools()).tools;
+  expect(tools.filter(t => t.annotations?.readOnlyHint === true).map(t => t.name)).toEqual(["describe"]);
 });

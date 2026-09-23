@@ -1,14 +1,21 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { OpError, type Issue, type ModelDoc } from "../document";
+import type { Issue, ModelDoc } from "../document";
 import { flatten, type Compiled, type FlatPart } from "../scene/compile";
 import { exportModelFiles, modelAnchors, modelLife, type Anchor } from "../export/model";
 import { listModelNames, requireModelFile, selectModels, type Workspace } from "./workspace";
-import { compileFor, opError, readModel } from "./load";
+import { compileFor, internalError, opError, readModel } from "./load";
 import { markExported } from "./list";
 
 type Loaded = { doc: ModelDoc; compiled: Compiled; flat: FlatPart[]; anchors?: Record<string, Anchor>; life?: { plan: string; metal: string } };
 const sortKeys = <T>(o: Record<string, T>) => Object.fromEntries(Object.entries(o).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+
+function readAggregate(path: string): Record<string, unknown> {
+  let data: unknown;
+  try { data = JSON.parse(readFileSync(path, "utf8")); } catch (e) { data = e; }
+  if (data && typeof data === "object" && !Array.isArray(data) && !(data instanceof Error)) return data as Record<string, unknown>;
+  throw opError("io", `${path} is not a JSON object`, "fix or delete it, then run a full build to regenerate it");
+}
 
 export function buildProject(ws: Workspace, input: { models?: string[] } = {}) {
   const outputs = ws.config?.outputs;
@@ -34,8 +41,7 @@ export function buildProject(ws: Workspace, input: { models?: string[] } = {}) {
       if (life?.problems.length) fail(name, life.problems.map(p => ({ severity: "error", code: "life", message: p })));
       else v = { doc, compiled, flat, anchors, life: life?.entry };
     } catch (e) {
-      if (!(e instanceof OpError)) throw e;
-      fail(name, e.issues);
+      fail(name, internalError(e).issues);
     }
     cache.set(name, v);
     return v;
@@ -66,7 +72,7 @@ export function buildProject(ws: Workspace, input: { models?: string[] } = {}) {
       if (!rel) return undefined;
       const path = join(dir, rel);
       mkdirSync(dirname(path), { recursive: true });
-      const merged = subset && existsSync(path) ? { ...JSON.parse(readFileSync(path, "utf8")), ...entries } : entries;
+      const merged = subset && existsSync(path) ? { ...readAggregate(path), ...entries } : entries;
       writeFileSync(path, indent ? JSON.stringify(sortKeys(merged), null, indent) : JSON.stringify(sortKeys(merged)));
       return path;
     };

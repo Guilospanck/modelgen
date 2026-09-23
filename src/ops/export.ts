@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { OpError } from "../document";
 import { flatten } from "../scene/compile";
@@ -13,6 +13,7 @@ export function exportModel(ws: Workspace, input: { model: string; formats?: For
   if (bad.length) throw opError("invalid_format", `unknown format ${bad.join(", ")}`, `formats: ${FORMATS.join(", ")}`);
   if (!input.out) throw opError("missing_out", "no output directory", "pass out (CLI: --out <dir>)");
   const out = resolve(ws.root, input.out);
+  if (existsSync(out) && !statSync(out).isDirectory()) throw opError("io", `${out} is not a directory`, "pass a directory for out");
 
   const { file, doc } = readModel(ws, input.model);
   const compiled = compileFor(file, doc);
@@ -31,12 +32,17 @@ export function exportModel(ws: Workspace, input: { model: string; formats?: For
     if (life) pending.push({ name: `${base}.life.json`, format: "life", data: JSON.stringify(life.entry) });
   }
 
-  mkdirSync(out, { recursive: true });
-  const written = pending.map(f => {
-    const path = join(out, f.name);
-    writeFileSync(path, f.data);
-    return { path, format: f.format, bytes: typeof f.data === "string" ? Buffer.byteLength(f.data) : f.data.length };
-  });
+  let written: { path: string; format: string; bytes: number }[];
+  try {
+    mkdirSync(out, { recursive: true });
+    written = pending.map(f => {
+      const path = join(out, f.name);
+      writeFileSync(path, f.data);
+      return { path, format: f.format, bytes: typeof f.data === "string" ? Buffer.byteLength(f.data) : f.data.length };
+    });
+  } catch (e) {
+    throw opError("io", `can't write to ${out}: ${(e as Error).message}`);
+  }
   markExported(ws, doc.name);
   return { model: doc.name, files: written, issues };
 }

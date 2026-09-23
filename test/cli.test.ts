@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { run } from "../src/cli/main";
@@ -66,4 +66,45 @@ test("capture exits 1 when the model has errors, but still writes the image", as
   expect(r.code).toBe(1);
   expect(r.out).toContain("m.png");
   expect(r.err).toContain("floating");
+});
+
+test("an unreadable or broken ops file is a usage error", async () => {
+  const s = session();
+  await s.run("new", "m");
+  const missing = await s.run("edit", "m", "nope.yaml");
+  expect(missing.code).toBe(2);
+  expect(missing.err).toContain("nope.yaml");
+  writeFileSync(join(s.cwd, "ops.yaml"), "- add: [\n");
+  const broken = await s.run("edit", "m", "ops.yaml");
+  expect(broken.code).toBe(2);
+  expect(broken.err).toContain("ops.yaml");
+  s.setStdin("- add: [\n");
+  expect((await s.run("edit", "m", "-")).code).toBe(2);
+});
+
+test("export --out pointing at a file is an operation error", async () => {
+  const s = session();
+  await s.run("new", "m");
+  await s.run("edit", "m", "--op", BODY);
+  writeFileSync(join(s.cwd, "taken"), "x");
+  const r = await s.run("export", "m", "--out", "taken", "--json");
+  expect(r.code).toBe(1);
+  expect(JSON.parse(r.out).issues[0].code).toBe("io");
+});
+
+test("unexpected errors become an internal issue with exit 1", async () => {
+  const s = session();
+  mkdirSync(join(s.cwd, "modelgen.yaml")); // a directory where the config file should be
+  const r = await s.run("list");
+  expect(r.code).toBe(1);
+  expect(r.err).toContain("internal");
+  const j = await s.run("list", "--json");
+  expect(j.code).toBe(1);
+  expect(JSON.parse(j.out).issues[0].code).toBe("internal");
+});
+
+test("init creates a missing project directory", async () => {
+  const s = session();
+  expect((await s.run("init", "--project", "new/proj")).code).toBe(0);
+  expect(existsSync(join(s.cwd, "new/proj/modelgen.yaml"))).toBe(true);
 });

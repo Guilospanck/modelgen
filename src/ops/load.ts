@@ -25,4 +25,11 @@ export function readModel(ws: Workspace, name: string): { file: string; text: st
 
 export const compileFor = (file: string, doc: ModelDoc): Compiled => compileModel(doc, { baseDir: dirname(file) });
 
+// Wraps an unexpected (non-OpError) failure so callers can report it like any other.
+export function internalError(e: unknown): OpError {
+  if (e instanceof OpError) return e;
+  const message = e instanceof Error ? e.message : String(e);
+  return new OpError(`unexpected error: ${message}`, [{ severity: "error", code: "internal", message, hint: "this is likely a modelgen bug; please report it" }]);
+}
+
 export const slug = (s: string) => s.replace(/[^A-Za-z0-9_-]+/g, "_");

@@ -62,9 +62,14 @@ function parseViews(v: string | undefined): string | [number, number][] | undefi
 function readOps(file: string | undefined, inline: string[], io: IO): unknown[] {
   const list: unknown[] = inline.map(s => { try { return JSON.parse(s); } catch { throw new UsageError(`--op is not valid JSON: ${s}`); } });
   if (file !== undefined) {
-    const text = file === "-" ? io.stdin() : readFileSync(resolve(io.cwd, file), "utf8");
-    const data = YAML.parse(text);
-    const arr = Array.isArray(data) ? data : data?.ops;
+    const where = file === "-" ? "stdin" : file;
+    let data: unknown;
+    try {
+      data = YAML.parse(file === "-" ? io.stdin() : readFileSync(resolve(io.cwd, file), "utf8"));
+    } catch (e) {
+      throw new UsageError(`can't read ops from ${where}: ${(e as Error).message.split("\n")[0]}`);
+    }
+    const arr = Array.isArray(data) ? data : (data as { ops?: unknown } | null)?.ops;
     if (!Array.isArray(arr)) throw new UsageError("the ops file must be a list of ops (or { ops: [...] })");
     list.push(...arr);
   }
@@ -91,6 +96,7 @@ export async function run(argv: string[], io: IO = defaultIO): Promise<number | 
       case "init": {
         const config = join(root, ops.CONFIG_FILE);
         if (existsSync(config)) throw new OpError(`${ops.CONFIG_FILE} already exists`, [{ severity: "error", code: "exists", message: `${config} already exists` }]);
+        mkdirSync(root, { recursive: true });
         writeFileSync(config, ops.configTemplate());
         mkdirSync(join(root, "models"), { recursive: true });
         result = { config, models: join(root, "models") };
@@ -129,6 +135,10 @@ export async function run(argv: string[], io: IO = defaultIO): Promise<number | 
       else io.err(`modelgen: ${e.message}\n${formatIssues(e.issues)}`);
       return 1;
     }
-    throw e;
+    // Backstop: anything else is reported like an operation error rather than a stack trace.
+    const err = ops.internalError(e);
+    if (json) io.out(JSON.stringify({ error: err.message, issues: err.issues }, null, 2) + "\n");
+    else io.err(`modelgen: ${err.message}\n${formatIssues(err.issues)}`);
+    return 1;
   }
 }

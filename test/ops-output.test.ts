@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openWorkspace } from "../src/ops/workspace";
@@ -167,4 +167,31 @@ test("a copied model file keeps the old name: export and capture refuse it inste
   expect(code(() => exportModel(w, { model: "lantern2", out }))).toBe("schema");
   expect(code(() => capture(w, { model: "lantern2", size: 64 }))).toBe("schema");
   expect(existsSync(out)).toBe(false);
+});
+
+test("a corrupt exports record doesn't break list, export or build", () => {
+  const root = tmp();
+  writeFileSync(join(root, "modelgen.yaml"), "outputs:\n  - dir: out\n    formats: [glb]\n");
+  const w = lantern(root);
+  mkdirSync(w.stateDir, { recursive: true });
+  writeFileSync(join(w.stateDir, "exports.json"), "{ not json");
+  expect(listModels(w).models.map(m => m.name)).toEqual(["lantern"]);
+  exportModel(w, { model: "lantern", out: join(root, "dist") });
+  expect(listModels(w).models[0].exportedAt).toBeDefined();
+  writeFileSync(join(w.stateDir, "exports.json"), "[1, 2]");
+  expect(buildProject(w).failed).toEqual([]);
+});
+
+test("a subset build with a corrupt aggregate fails with an io issue naming the file", () => {
+  const root = tmp();
+  writeFileSync(join(root, "modelgen.yaml"), "outputs:\n  - dir: out\n    formats: [glb]\n    anchors: anchors.json\n");
+  const w = lantern(root);
+  editModel(w, { model: "lantern", ops: [{ set: { anchors: { slots: ["head"] } } }] });
+  buildProject(w);
+  writeFileSync(join(root, "out/anchors.json"), "{ broken");
+  let err: unknown;
+  try { buildProject(w, { models: ["lantern"] }); } catch (e) { err = e; }
+  expect(err).toBeInstanceOf(OpError);
+  expect((err as OpError).issues[0].code).toBe("io");
+  expect((err as OpError).issues[0].message).toContain(join(root, "out/anchors.json"));
 });
