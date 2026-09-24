@@ -73,7 +73,7 @@ export function createViewer(container, on = {}) {
   let nodes = new Map(); // part name → Object3D
   let selected = null, handles = [], activeHandle = -1, mode = "translate", snap = false, step = 0.01;
 
-  // Minor lines every step, major every 5 steps, like a cutting mat.
+  // Minor lines every step, major every 5 steps, like a cutting mat. Returns the grid's span.
   function layGrid(box) {
     const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
     const extent = Math.max(size.x, size.z, size.y * 0.5, 1e-3);
@@ -97,7 +97,15 @@ export function createViewer(container, on = {}) {
     floor.scale.set(span, 1, span);
     on.scale?.(label(step));
     applySnap();
-    return { box, center, radius: size.length() / 2 || 1, span };
+    return span;
+  }
+
+  // The grid stays put while a model is edited; it only moves when the model leaves its middle
+  // or sinks through the floor.
+  function gridHolds(box) {
+    const half = fit.span * 0.3, g = floor.position;
+    return box.min.x >= g.x - half && box.max.x <= g.x + half && box.min.z >= g.z - half && box.max.z <= g.z + half
+      && box.min.y >= g.y - step / 2;
   }
 
   function frame({ center, radius }) {
@@ -251,7 +259,9 @@ export function createViewer(container, on = {}) {
           if (p && bad.has(p.userData.part)) for (const m of [o.material].flat()) { m.emissive = PROBLEM; m.emissiveIntensity = 0.7; }
         });
         scene.add(model);
-        fit = layGrid(new THREE.Box3().setFromObject(model));
+        const box = new THREE.Box3().setFromObject(model), size = box.getSize(new THREE.Vector3());
+        const span = name !== modelName || !gridHolds(box) ? layGrid(box) : fit.span;
+        fit = { box, center: box.getCenter(new THREE.Vector3()), radius: size.length() / 2 || 1, span };
         light(fit);
         if (name !== modelName) frame(fit);
         modelName = name;
