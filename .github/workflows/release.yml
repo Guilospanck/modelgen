@@ -1,4 +1,7 @@
 name: release
+
+# Cut a release by pushing a version tag, e.g. `just tag 0.3.0` (which pushes v0.3.0).
+# Plain pushes to main do nothing here.
 on:
   push:
     tags: ["v*"]
@@ -61,10 +64,11 @@ jobs:
 
   publish:
     needs: smoke
-    runs-on: ubuntu-latest
+    # macOS: brew is on PATH for the formula style check.
+    runs-on: macos-15
     env:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+      HOMEBREW_TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -78,26 +82,64 @@ jobs:
         with:
           name: release
           path: release
-      - name: GitHub release
-        run: gh release create "$GITHUB_REF_NAME" release/* --generate-notes
+
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Notes passed to `just tag` live in the annotated tag's message.
+          # Re-fetch the tag itself: checkout may have created it locally as a
+          # lightweight tag pointing at the commit, dropping the annotation.
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          notes_args=()
+          if [[ "$(git cat-file -t "refs/tags/${GITHUB_REF_NAME}")" == "tag" ]]; then
+            # --notes is prepended to the generated changelog.
+            notes_args=(--notes "$(git tag -l --format='%(contents)' "$GITHUB_REF_NAME")")
+          fi
+          gh release create "$GITHUB_REF_NAME" release/* \
+            --title "$GITHUB_REF_NAME" \
+            ${notes_args[@]+"${notes_args[@]}"} \
+            --generate-notes
+
       - run: bun install --frozen-lockfile && bun run build:npm
       - name: npm (skipped until the NPM_TOKEN secret exists)
         if: env.NPM_TOKEN != ''
         run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Homebrew tap (skipped until the TAP_TOKEN secret exists)
-        if: env.TAP_TOKEN != ''
+
+      - name: Update Homebrew formula in tap (skipped until `just setup-tap-key` has run)
+        if: env.HOMEBREW_TAP_DEPLOY_KEY != ''
         run: |
-          v="${GITHUB_REF_NAME#v}"
-          git clone "https://x-access-token:${TAP_TOKEN}@github.com/Guilospanck/homebrew-tap.git" tap
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+
+          # Configure the deploy key for pushing to the tap over SSH.
+          mkdir -p ~/.ssh
+          printf '%s\n' "$HOMEBREW_TAP_DEPLOY_KEY" > ~/.ssh/tap_key
+          chmod 600 ~/.ssh/tap_key
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/tap_key -o StrictHostKeyChecking=accept-new"
+
+          git clone git@github.com:Guilospanck/homebrew-tap.git tap
           mkdir -p tap/Formula
-          bun scripts/formula.ts "$v" release/SHA256SUMS > tap/Formula/modelgen.rb
+
+          # Regenerate the formula fresh each release from the shared renderer
+          # (same source `just lint` checks locally), so the file is owned by CI
+          # and can't drift from what was checked before tagging.
+          ./scripts/render-formula.sh "$VERSION" release/SHA256SUMS > tap/Formula/modelgen.rb
+
+          # Backstop: refuse to publish a formula Homebrew would complain about,
+          # in case a tag was pushed without going through `just tag`.
+          brew style tap/Formula/modelgen.rb
+
           cd tap
-          git config user.name "modelgen release"
-          git config user.email "noreply@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/modelgen.rb
-          git commit -m "modelgen $v"
-          git push
+          if git diff --cached --quiet; then
+            echo "Formula already up to date; nothing to push."
+          else
+            git commit -m "modelgen ${VERSION}"
+            git push origin HEAD
+          fi
