@@ -299,3 +299,4 @@ textarea:focus-visible { outline-offset: -2px; }
 .save-state { color: var(--muted); font-size: 13px; white-space: nowrap; }
 .save-state.ok::before { content: "✓ "; color: var(--ok); }
 .save-state.bad { color: var(--error); }
+button.copied, button.primary.copied { background: color-mix(in srgb, var(--ok) 18%, var(--panel)); color: var(--ok); }

@@ -18,6 +18,17 @@ export function h(tag, props = {}, ...kids) {
   return el;
 }
 
+// A copy button confirms on itself: "✓ Copied" for a couple of seconds, at the same width.
+export function flashCopied(button, ms = 2000) {
+  if (!button) return;
+  const label = (button.dataset.label ??= button.textContent);
+  button.style.minWidth = `${button.offsetWidth}px`;
+  button.textContent = "✓ Copied";
+  button.classList.add("copied");
+  clearTimeout(button.copiedTimer);
+  button.copiedTimer = setTimeout(() => { button.textContent = label; button.classList.remove("copied"); button.style.minWidth = ""; }, ms);
+}
+
 const DEG = 180 / Math.PI;
 const num = v => (v === undefined || v === null || v === "" ? undefined : Number(v));
 

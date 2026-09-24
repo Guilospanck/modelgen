@@ -1,7 +1,7 @@
 // The Ask tab: describe a change in words, and the visitor's own AI chat answers with modelgen edit
 // ops, carried by copy and paste. The page itself talks to no AI and needs no API key.
 import { promptFor, followUpFor, parseOpsReply } from "./modelgen.js";
-import { h } from "./panels.js";
+import { flashCopied, h } from "./panels.js";
 
 // app: { state() → { text, doc, issues }, apply(ops) → { changes } | { error }, say(message) }
 export function createAssistant(root, app) {
@@ -25,8 +25,8 @@ export function createAssistant(root, app) {
       h("h3", {}, "History"),
       h("div", { class: "scroll" }, history, h("p", { class: "empty-note" }, "Your requests show up here."))));
 
-  async function copy(text, what) {
-    try { await navigator.clipboard.writeText(text); app.say(`${what} copied. Paste it into your chat.`); }
+  async function copy(text, what, button) {
+    try { await navigator.clipboard.writeText(text); flashCopied(button); app.say(`${what} copied. Paste it into your chat.`); }
     catch {
       app.say("Couldn't reach the clipboard; copy the text from the box below instead.");
       showResult("info", `${what}: select all and copy`, h("textarea", { class: "field", rows: 4, readOnly: true, value: text }));
@@ -50,7 +50,7 @@ export function createAssistant(root, app) {
     turn.replies.append(h("li", { class: kind }, `Reply ${turn.n}: ${summary}`));
   }
 
-  async function copyPrompt() {
+  async function copyPrompt(e) {
     const request = input.value.trim();
     if (!request) { input.focus(); return app.say("Describe the change first."); }
     const { text, doc, issues } = app.state();
@@ -59,11 +59,11 @@ export function createAssistant(root, app) {
     pending = null;
     result.hidden = true;
     startTurn(request);
-    await copy(`${p.system}\n\n${p.user}`, "Prompt");
+    await copy(`${p.system}\n\n${p.user}`, "Prompt", e.currentTarget);
   }
 
-  async function copyFollowUp() {
-    if (pending) await copy(followUpFor({ ...pending, text: app.state().text }), "Follow-up");
+  async function copyFollowUp(e) {
+    if (pending) await copy(followUpFor({ ...pending, text: app.state().text }), "Follow-up", e.currentTarget);
   }
   const followUpButton = () => h("button", { type: "button", class: "primary", onclick: copyFollowUp }, "Copy follow-up");
 

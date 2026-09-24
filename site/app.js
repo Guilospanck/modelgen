@@ -1,6 +1,6 @@
 import { buildModel, defineMaterials, editModel, parseModel, renameModel, PATTERNS, VERSION } from "./modelgen.js";
 import { createViewer, niceStep } from "./viewer.js";
-import { renderTree, renderProperties, renderMaterials, h } from "./panels.js";
+import { renderTree, renderProperties, renderMaterials, flashCopied, h } from "./panels.js";
 import { SHAPES, handlesFor, insidePoint, movePoint, restHeight, round, uniqueName, allParts } from "./shapes.js";
 import { createAssistant } from "./assistant.js";
 import { listModels, loadModel, saveModel, deleteModel } from "./store.js";
@@ -442,9 +442,10 @@ $("glb").addEventListener("click", () => download("glb"));
 $("usdz").addEventListener("click", () => download("usdz"));
 $("undo").addEventListener("click", () => undo(-1));
 $("redo").addEventListener("click", () => undo(1));
-$("share").addEventListener("click", async () => {
+$("share").addEventListener("click", async e => {
+  const button = e.currentTarget; // gone from the event once it's done dispatching
   history.replaceState(null, "", `#${encode(state.text)}`);
-  try { await navigator.clipboard.writeText(location.href); say("Link copied"); }
+  try { await navigator.clipboard.writeText(location.href); flashCopied(button); say("Link copied"); }
   catch { say("The link is in the address bar"); }
 });
 document.querySelector("h1").title = `modelgen ${VERSION}`;
