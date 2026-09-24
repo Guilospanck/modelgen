@@ -118,6 +118,13 @@ Every command takes `--project <dir>`. Most take `--json` for machine-readable
 output (`schema` always prints JSON; `mcp` ignores it).
 Exit codes: 0 ok, 1 the model has problems or the operation failed, 2 bad usage.
 
+## Try it in the browser
+
+The [playground](https://guilospanck.github.io/modelgen/) runs modelgen in
+your browser: edit a model's YAML, see it in 3D, download GLB and USDZ.
+Everything but script parts works there. It deploys from `main`
+(`site/` + `bun run build:web`, which writes `web-dist/`).
+
 ## Model files
 
 ```yaml

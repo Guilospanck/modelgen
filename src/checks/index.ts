@@ -1,5 +1,5 @@
 import type { Issue } from "../document";
-import type { FlatPart } from "../scene/compile";
+import type { FlatPart } from "../scene/tree";
 import { components } from "./connectivity";
 
 export function checkScene(flat: FlatPart[]): Issue[] {
