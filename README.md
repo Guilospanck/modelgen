@@ -8,7 +8,8 @@ game engines, desktop) and **USDZ** (iOS, macOS, AR Quick Look).
 Models are plain YAML files you can read, version and edit by hand.
 
 **[Try it in your browser →](https://guilospanck.github.io/modelgen/)** Build a
-model in a 3D editor, see its YAML, and download it, with nothing to install.
+model in a 3D editor or describe it to your own AI chat, see its YAML, and
+download it. Nothing to install, no account, no API key.
 
 ## Install
 
@@ -76,6 +77,7 @@ Make a model:
 - "Create a wooden treasure chest with metal bands and a lock. Use the mottle texture for the wood. Show me the capture."
 - "Make a coffee mug with a handle, about 10 cm tall, and export it as GLB."
 - "Build a simple stylized tree: a tapered trunk (tube) and a blob canopy. Keep everything connected."
+- "Make a keyboard keycap, 18 mm square, with the word Esc on top in white."
 
 Iterate on it:
 
@@ -101,8 +103,8 @@ Tips:
 
 - **Ask for captures.** The agent sees the render plus a list of problems ("handle is floating, nearest part is cap, 0.04 away"); "capture it and fix everything it reports" gets noticeably better results.
 - **Give real sizes.** Units are meters: "a 30 cm lantern" beats "a small lantern".
-- **Name the building blocks when you care:** `lathe` for round things (vases, bottles, lamp bodies), `extrude` for flat profiles, `tube` for handles, pipes and limbs, `blob` for organic forms, groups for parts that move together.
-- **Models are files:** `models/<name>.model.yaml` in the project. You can read or hand-edit them; the agent picks up your edits.
+- **Name the building blocks when you care:** `lathe` for round things (vases, bottles, lamp bodies), `extrude` for flat profiles, `tube` for handles, pipes and limbs, `blob` for organic forms, `text` for letters and labels, groups for parts that move together.
+- **Models are files:** `models/<name>.model.yaml` in the project. You can read or hand-edit them; the agent picks up your edits, and its own edits keep your comments and formatting.
 - **Current limits:** no boolean cut-outs or bevels yet (hollows are made with profiles), no ready-made kits (creature, furniture...), and script parts only when the server runs with `modelgen mcp --allow-scripts`.
 
 ## Use it yourself
@@ -123,17 +125,31 @@ Exit codes: 0 ok, 1 the model has problems or the operation failed, 2 bad usage.
 
 ## Try it in the browser
 
-The [playground](https://guilospanck.github.io/modelgen/) is a 3D editor that
-runs modelgen in your browser. Add shapes, move, rotate and scale them with
-gizmos (W / E / R), drag the points of profiles, paths and blobs, regroup parts
-in the scene list, edit materials, or type the YAML directly; problems show on
-the parts they belong to. Every change is a modelgen edit, so the YAML keeps its
-comments and the result is a normal model file. Download GLB and USDZ, or copy
-a link that carries the model. Everything but script parts works there.
+The [playground](https://guilospanck.github.io/modelgen/) runs modelgen in your
+browser. Everything but script parts works there.
+
+- **Build in 3D.** Add any shape, including `text`, and move, rotate and scale
+  it with gizmos (W / E / R, optional snapping). Drag the points of profiles,
+  paths and blobs. Regroup parts in the scene list, edit shapes and materials
+  in the sidebar, or type the YAML directly. Undo and redo cover all of it.
+- **Fix problems in place.** Problems show on the parts they belong to, and
+  the common ones have a Fix button: a floating part moves to touch the model,
+  and a missing material gets defined.
+- **Ask in words.** The Ask tab writes a prompt for the change you describe.
+  Paste it into ChatGPT, Claude, Gemini or any chat you use, then paste the
+  reply back. The playground applies it as modelgen edits, and writes a
+  follow-up for the same chat if anything is left to fix. The page itself talks
+  to no AI and needs no API key.
+- **Keep your models.** Start from an example or a new, empty model (it gets a
+  random name until you give it one). Changes save automatically, in this
+  browser only, and examples stay untouched: your first change saves a copy.
+- **Take it with you.** Download GLB and USDZ, or copy a link that carries the
+  model.
+
+Every change is a modelgen edit, so the YAML keeps its comments and the result
+is a normal model file you can use with the CLI.
 
 It deploys from `main` (`site/` + `bun run build:web`, which writes `web-dist/`).
-
-Edits from the CLI and agents keep the file's comments and formatting too.
 
 ## Model files
 
