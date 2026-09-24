@@ -12,10 +12,18 @@ Models are plain YAML files you can read, version and edit by hand.
 ```sh
 brew install guilospanck/tap/modelgen                                              # macOS, Linux
 curl -fsSL https://raw.githubusercontent.com/Guilospanck/modelgen/main/install.sh | sh   # any Unix
-npx -y @guilospanck/modelgen --help                                               # with Node 20+
+npm install -g @guilospanck/modelgen                                               # with Node 20+
 ```
 
-Windows: download `modelgen-<version>-windows-x64.zip` from the
+With npm you can also add it to a project instead of installing it globally,
+or run it without installing:
+
+```sh
+npm install --save-dev @guilospanck/modelgen   # then: npx modelgen build
+npx -y @guilospanck/modelgen --help            # one-off, nothing installed
+```
+
+Windows: use npm (above), or download `modelgen-<version>-windows-x64.zip` from the
 [releases](https://github.com/Guilospanck/modelgen/releases).
 
 ## Use it from your agent
