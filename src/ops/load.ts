@@ -5,8 +5,7 @@ import { compileModel, type Compiled } from "../scene/compile";
 import { requireModelFile, type Workspace } from "./workspace";
 import { syncHandEdits } from "./history";
 
-export const opError = (code: string, message: string, hint?: string) =>
-  new OpError(message, [{ severity: "error", code, message, ...(hint ? { hint } : {}) }]);
+export { opError } from "../document/issues";
 
 // Reads a model, recording any hand edit as an undo step first (even a broken one).
 export function readModel(ws: Workspace, name: string): { file: string; text: string; doc: ModelDoc } {

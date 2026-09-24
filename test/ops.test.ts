@@ -159,3 +159,13 @@ test("duplicating an existing script part needs --allow-scripts", () => {
   writeFileSync(path, "modelgen: 1\nname: m\nparts:\n  - name: s\n    script:\n      module: x.js\n");
   expect(code(() => editModel(w, { model: "m", ops: [{ duplicate: { name: "s", as: "s2" } }] }))).toBe("scripts_disabled");
 });
+
+test("edits keep the comments someone wrote in the model file", () => {
+  const w = ws();
+  const c = createModel(w, { name: "lamp" });
+  writeFileSync(c.path, "modelgen: 1\nname: lamp\nparts:\n  # keep me\n  - name: base\n    box: {size: [1, 0.1, 1]} # 1 m square\n");
+  editModel(w, { model: "lamp", ops: [{ update: { name: "base", set: { position: [0, 0.05, 0] } } }] });
+  expect(readFileSync(c.path, "utf8")).toBe("modelgen: 1\nname: lamp\nparts:\n  # keep me\n  - name: base\n    box: {size: [1, 0.1, 1]} # 1 m square\n    position: [0, 0.05, 0]\n");
+  undoModel(w, { model: "lamp" });
+  expect(readFileSync(c.path, "utf8")).toContain("# 1 m square");
+});

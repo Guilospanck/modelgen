@@ -20,8 +20,19 @@ export function parseModelText(text: string, file: string): unknown {
   return d.toJS();
 }
 
-const TOP = ["modelgen", "name", "units", "normalize", "materials", "parts", "anchors", "life"];
-const PART = ["name", ...SHAPE_KEYS, "position", "rotation", "scale", "material", "visible", "surface", "bump"];
+export const YAML_PRINT = { lineWidth: 0, flowCollectionPadding: false } as const;
+
+// Numbers and number pairs/triples stay on one line: position: [0, 1, 0]
+export function flowNumbers(node: YAML.Document | YAML.Node) {
+  YAML.visit(node, {
+    Seq(_, seq) {
+      if (seq.items.every(i => YAML.isScalar(i) || (YAML.isSeq(i) && i.items.every(YAML.isScalar)))) seq.flow = true;
+    },
+  });
+}
+
+export const TOP_KEYS = ["modelgen", "name", "units", "normalize", "materials", "parts", "anchors", "life"];
+export const PART_KEYS = ["name", ...SHAPE_KEYS, "position", "rotation", "scale", "material", "visible", "surface", "bump"];
 
 function ordered<T extends object>(o: T, keys: readonly string[]): T {
   const src = o as Record<string, unknown>, out: Record<string, unknown> = {};
@@ -31,14 +42,14 @@ function ordered<T extends object>(o: T, keys: readonly string[]): T {
 }
 
 function canonicalPart(p: Part): Part {
-  const q = ordered(p, PART);
+  const q = ordered(p, PART_KEYS);
   if (q.group) q.group = { parts: q.group.parts.map(canonicalPart) };
   return q;
 }
 
 // Stable key order so saved files diff cleanly.
 export function canonical(doc: ModelDoc): ModelDoc {
-  const d = ordered(doc, TOP);
+  const d = ordered(doc, TOP_KEYS);
   d.parts = d.parts.map(canonicalPart);
   return d;
 }
@@ -47,13 +58,8 @@ export function stringifyModel(doc: ModelDoc, file: string): string {
   const c = canonical(doc);
   if (file.endsWith(".json")) return JSON.stringify(c, null, 2) + "\n";
   const d = new YAML.Document(c);
-  // numbers and number pairs/triples stay on one line: position: [0, 1, 0]
-  YAML.visit(d, {
-    Seq(_, node) {
-      if (node.items.every(i => YAML.isScalar(i) || (YAML.isSeq(i) && i.items.every(YAML.isScalar)))) node.flow = true;
-    },
-  });
-  return d.toString({ lineWidth: 0, flowCollectionPadding: false });
+  flowNumbers(d);
+  return d.toString(YAML_PRINT);
 }
 
 export function modelJsonSchema(): Record<string, unknown> {

@@ -2,7 +2,7 @@ import { test, expect } from "bun:test";
 import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildModel } from "../src/browser";
+import { buildModel, editModel, parseModel } from "../src/browser";
 import { loadModelFile } from "../src/document";
 import { compileModel } from "../src/scene/compile";
 import { exportModelFiles } from "../src/export/model";
@@ -58,3 +58,19 @@ test("the web bundle runs without Node's Buffer and zlib", async () => {
   expect(run.stderr.toString()).toBe("");
   expect(JSON.parse(run.stdout.toString())).toEqual({ issues: [], magic: "glTF" });
 }, 60_000);
+
+test("a model with a floating part still gets a preview, but no files", () => {
+  const r = buildModel("modelgen: 1\nname: x\nparts:\n  - {name: a, box: {size: [1, 1, 1]}}\n  - {name: b, box: {size: [1, 1, 1]}, position: [5, 0, 0]}");
+  expect(r.files).toEqual([]);
+  expect(r.issues.some(i => i.code === "floating")).toBe(true);
+  expect(String.fromCharCode(...r.preview!.subarray(0, 4))).toBe("glTF");
+});
+
+test("parseModel and editModel report problems instead of throwing", () => {
+  expect(parseModel(text("mug")).doc?.name).toBe("mug");
+  expect(parseModel("parts: [").issues[0].code).toBe("parse");
+  const edited = editModel(text("mug"), [{ update: { name: "handle", set: { position: [0.06, 0.05, 0] } } }]);
+  expect(edited.text).toContain("# outer bottom");
+  expect(edited.text).toContain("position: [0.06, 0.05, 0]");
+  expect(editModel(text("mug"), [{ remove: { name: "nope" } }]).issues[0].code).toBe("not_found");
+});

@@ -19,7 +19,8 @@ export const FORMATS: Format[] = ["usdz", "glb"];
 export type ExportedFile = { format: Format; data: Buffer };
 export type Anchor = { pos: number[]; scale: number };
 
-export function exportModelFiles(doc: ModelDoc, compiled: Compiled, formats: Format[], opts: { part?: string } = {}): { files: ExportedFile[]; issues: Issue[] } {
+// ignoreChecks still writes files for a model with problems (the editor's preview); exports never set it.
+export function exportModelFiles(doc: ModelDoc, compiled: Compiled, formats: Format[], opts: { part?: string; ignoreChecks?: boolean } = {}): { files: ExportedFile[]; issues: Issue[] } {
   let roots: SceneNode[] = compiled.nodes;
   if (opts.part !== undefined) {
     const node = findNode(compiled.nodes, opts.part);
@@ -28,7 +29,8 @@ export function exportModelFiles(doc: ModelDoc, compiled: Compiled, formats: For
   }
   const flat = flatten(roots);
   const issues = checkScene(flat);
-  if (issues.some(i => i.severity === "error")) return { files: [], issues };
+  if (!opts.ignoreChecks && issues.some(i => i.severity === "error")) return { files: [], issues };
+  if (flat.length === 0) return { files: [], issues };
 
   const parts = flat.map(f => f.part);
   const normalize = opts.part === undefined && doc.normalize === true;
@@ -70,7 +72,7 @@ export function exportModelFiles(doc: ModelDoc, compiled: Compiled, formats: For
       files.push({ format, data });
     }
   }
-  return issues.some(i => i.severity === "error") ? { files: [], issues } : { files, issues };
+  return !opts.ignoreChecks && issues.some(i => i.severity === "error") ? { files: [], issues } : { files, issues };
 }
 
 // Anchors in the exported model's space (normalized space when normalize is on).

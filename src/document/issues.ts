@@ -18,3 +18,6 @@ export class OpError extends Error {
 }
 
 export const hasErrors = (issues: Issue[]) => issues.some(i => i.severity === "error");
+
+export const opError = (code: string, message: string, hint?: string) =>
+  new OpError(message, [{ severity: "error", code, message, ...(hint ? { hint } : {}) }]);
