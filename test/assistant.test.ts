@@ -1,8 +1,8 @@
 import { test, expect } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { promptFor, followUpFor, parseOpsReply, opsSchema } from "../src/assistant";
-import { editModel, parseModel } from "../src/browser";
+import { promptFor, followUpFor, parseOpsReply } from "../src/assistant";
+import { editModel } from "../src/browser";
 
 const lantern = readFileSync(join(__dirname, "../examples/lantern.model.yaml"), "utf8");
 const floating = [{ severity: "error" as const, code: "floating", part: "leg", message: '"leg" is not touching the rest of the model', hint: "move it" }];
@@ -15,13 +15,6 @@ test("the full prompt carries the rules, the model, current problems and the req
   expect(p.user).toContain("name: lantern");
   expect(p.user).toContain('"leg" is not touching');
   expect(p.user.trim().endsWith("add a red ball on top")).toBe(true);
-});
-
-test("the compact prompt fits a 4k-token local model with room to answer", () => {
-  const p = promptFor({ request: "make the handle thicker", text: lantern, compact: true });
-  // ~4 characters per token: leave well over 1500 tokens for the reply.
-  expect((p.system.length + p.user.length) / 4).toBeLessThan(2000);
-  expect(p.system).toContain('"update"');
 });
 
 test("a follow-up reports what went wrong and restates the request", () => {
@@ -46,17 +39,4 @@ test("parsed ops apply through the normal edit path", () => {
   const r = editModel(lantern, ops!);
   expect(r.issues).toEqual([]);
   expect(r.text).toContain("name: ball");
-});
-
-test("the output schema names the model's real parts and materials", () => {
-  const doc = parseModel(lantern).doc!;
-  const s = opsSchema(doc) as any;
-  const json = JSON.stringify(s);
-  expect(json).toContain('"enum":["base","body","cap","handle"]');
-  expect(s.properties.ops.type).toBe("array");
-  expect(s.$defs).toBeDefined();
-  // An empty model has nothing to update or remove yet.
-  const empty = JSON.stringify(opsSchema({ modelgen: 1, name: "x", parts: [] }));
-  expect(empty).not.toContain('"update"');
-  expect(empty).toContain('"add"');
 });

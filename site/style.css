@@ -245,10 +245,8 @@ textarea:focus-visible { outline-offset: -2px; }
 .ask { display: grid; gap: 8px; padding: 12px 14px 16px; }
 .ask > .label { color: var(--muted); font-size: 13px; }
 .ask > .note { margin: 0; }
-.ask-actions { display: grid; gap: 8px; }
-.ask-actions > button { justify-self: start; }
+.ask > button { justify-self: start; }
 .row-buttons { display: flex; gap: 8px; }
-.ask progress { width: 100%; accent-color: var(--ruler); }
 .log { display: grid; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; font-size: 13px; }
 .log li { padding: 6px 10px; border-left: 3px solid var(--line); background: color-mix(in srgb, var(--panel) 50%, transparent); border-radius: 0 6px 6px 0; overflow-wrap: anywhere; }
 .log li.you { border-left-color: var(--ruler); }

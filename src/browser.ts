@@ -51,4 +51,4 @@ export function editModel(text: string, ops: unknown[], opts: { json?: boolean }
 }
 
 export { defineMaterials };
-export { promptFor, followUpFor, parseOpsReply, opsSchema } from "./assistant";
+export { promptFor, followUpFor, parseOpsReply } from "./assistant";
