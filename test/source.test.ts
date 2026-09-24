@@ -112,3 +112,15 @@ test("bad ops and broken documents throw OpError and change nothing", () => {
   expect(() => editText("parts: [", [{ remove: { name: "a" } }])).toThrow(OpError);
   expect(() => editText("modelgen: 1\nname: x\nparts: [{name: a, box: {size: 1}}]\n", [{ remove: { name: "a" } }])).toThrow(OpError);
 });
+
+test("a renamed material keeps its inline style; groups are always blocks", () => {
+  const src = "modelgen: 1\nname: x\nmaterials:\n  glaze: {color: \"#2f6f8f\"}\nparts:\n  - name: a\n    box: {size: [1, 1, 1]}\n    material: glaze\n";
+  const renamed = editText(src, [{ set_material: { name: "ceramic", material: { color: "#2f6f8f" } } }, { update: { name: "a", set: { material: "ceramic" } } }, { remove_material: { name: "glaze" } }]);
+  expect(renamed.text).toContain('  ceramic: {color: "#2f6f8f"}\n');
+  const grouped = editText(src, [{ add: { part: { name: "g", group: { parts: [] } } } }, { reparent: { name: "a", parent: "g" } }]);
+  expect(grouped.text).toContain("  - name: g\n    group:\n      parts:\n        - name: a\n          box: {size: [1, 1, 1]}\n");
+  // The same move in two steps: an empty group first, then the part dragged into it.
+  const empty = editText(src, [{ add: { part: { name: "g", group: { parts: [] } } } }]).text;
+  expect(empty).toContain("    group:\n      parts: []\n");
+  expect(editText(empty, [{ reparent: { name: "a", parent: "g" } }]).text).toContain("      parts:\n        - name: a\n          box: {size: [1, 1, 1]}\n");
+});

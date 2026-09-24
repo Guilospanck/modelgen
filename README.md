@@ -7,8 +7,8 @@ game engines, desktop) and **USDZ** (iOS, macOS, AR Quick Look).
 
 Models are plain YAML files you can read, version and edit by hand.
 
-**[Try it in your browser →](https://guilospanck.github.io/modelgen/)** Edit a
-model, see it in 3D and download it, with nothing to install.
+**[Try it in your browser →](https://guilospanck.github.io/modelgen/)** Build a
+model in a 3D editor, see its YAML, and download it, with nothing to install.
 
 ## Install
 
@@ -123,10 +123,17 @@ Exit codes: 0 ok, 1 the model has problems or the operation failed, 2 bad usage.
 
 ## Try it in the browser
 
-The [playground](https://guilospanck.github.io/modelgen/) runs modelgen in
-your browser: edit a model's YAML, see it in 3D, download GLB and USDZ.
-Everything but script parts works there. It deploys from `main`
-(`site/` + `bun run build:web`, which writes `web-dist/`).
+The [playground](https://guilospanck.github.io/modelgen/) is a 3D editor that
+runs modelgen in your browser. Add shapes, move, rotate and scale them with
+gizmos (W / E / R), drag the points of profiles, paths and blobs, regroup parts
+in the scene list, edit materials, or type the YAML directly; problems show on
+the parts they belong to. Every change is a modelgen edit, so the YAML keeps its
+comments and the result is a normal model file. Download GLB and USDZ, or copy
+a link that carries the model. Everything but script parts works there.
+
+It deploys from `main` (`site/` + `bun run build:web`, which writes `web-dist/`).
+
+Edits from the CLI and agents keep the file's comments and formatting too.
 
 ## Model files
 

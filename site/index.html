@@ -6,7 +6,7 @@
   <!-- The page has its own dark theme; stop Dark Reader from recoloring the 3D mat. -->
   <meta name="darkreader-lock">
   <title>modelgen playground</title>
-  <meta name="description" content="Write a modelgen model in YAML and see it as a 3D model. Download GLB and USDZ. Runs entirely in your browser.">
+  <meta name="description" content="Build a 3D model in your browser: place and shape parts, edit the YAML, download GLB and USDZ.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -22,33 +22,61 @@
 <body>
   <header class="bar">
     <h1>modelgen <span>playground</span></h1>
+    <div class="menu">
+      <button id="add" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="add-menu">Add</button>
+      <div id="add-menu" class="popup" role="menu" hidden></div>
+    </div>
+    <div class="group" role="group" aria-label="History">
+      <button id="undo" type="button" title="Undo (⌘Z)">Undo</button>
+      <button id="redo" type="button" title="Redo (⇧⌘Z)">Redo</button>
+    </div>
     <label class="pick">Example
       <select id="example"></select>
     </label>
-    <a class="repo" href="https://github.com/Guilospanck/modelgen">Install the CLI</a>
+    <div class="end">
+      <button id="share" type="button">Copy link</button>
+      <button id="glb" type="button" class="primary" disabled>Download GLB</button>
+      <button id="usdz" type="button" class="primary" disabled>Download USDZ</button>
+      <a class="repo" href="https://github.com/Guilospanck/modelgen">Install the CLI</a>
+    </div>
   </header>
 
   <main>
-    <section class="stage" aria-label="3D preview">
+    <section class="stage" aria-label="3D view">
       <div class="mat">
-        <div id="viewer" class="viewer" role="img" aria-label="3D preview of the model. Drag to rotate, scroll or pinch to zoom."></div>
+        <div id="viewer" class="viewer" role="img" aria-label="3D view of the model. Drag to orbit, scroll or pinch to zoom, click a part to select it."></div>
         <p id="scale" class="scale"></p>
-        <p id="stale" class="stale" hidden>Showing the last version that built. Fix the problems below to update it.</p>
+        <p id="stale" class="stale" hidden>Showing the last version that built. Fix the problems in the sidebar to update it.</p>
+        <div class="tools" role="toolbar" aria-label="Transform">
+          <button type="button" data-mode="translate" aria-pressed="true" title="Move (W)">Move</button>
+          <button type="button" data-mode="rotate" aria-pressed="false" title="Rotate (E)">Rotate</button>
+          <button type="button" data-mode="scale" aria-pressed="false" title="Scale (R)">Scale</button>
+          <label class="snap"><input id="snap" type="checkbox"> Snap</label>
+        </div>
       </div>
-      <div class="actions">
-        <button id="glb" type="button" disabled>Download GLB</button>
-        <button id="usdz" type="button" disabled>Download USDZ</button>
-        <button id="share" type="button" class="quiet">Copy link</button>
-        <output id="status" aria-live="polite"></output>
-      </div>
+      <output id="status" class="status" aria-live="polite"></output>
     </section>
 
-    <section class="source" aria-label="Model source">
-      <label for="yaml" class="visually-hidden">Model YAML</label>
-      <textarea id="yaml" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+    <aside class="side">
+      <div class="tabs" role="tablist" aria-label="Sidebar">
+        <button type="button" role="tab" id="tab-scene" aria-controls="panel-scene" aria-selected="true">Scene</button>
+        <button type="button" role="tab" id="tab-materials" aria-controls="panel-materials" aria-selected="false">Materials</button>
+        <button type="button" role="tab" id="tab-yaml" aria-controls="panel-yaml" aria-selected="false">YAML</button>
+      </div>
+      <div id="panel-scene" class="panel scene" role="tabpanel" aria-labelledby="tab-scene">
+        <div id="tree" class="tree" role="tree" aria-label="Parts"></div>
+        <div id="props" class="props"></div>
+      </div>
+      <div id="panel-materials" class="panel" role="tabpanel" aria-labelledby="tab-materials" hidden>
+        <div id="materials" class="materials"></div>
+      </div>
+      <div id="panel-yaml" class="panel yaml" role="tabpanel" aria-labelledby="tab-yaml" hidden>
+        <label for="yaml" class="visually-hidden">Model YAML</label>
+        <textarea id="yaml" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+        <p class="note">Units are meters, +y is up, +z is the front. Everything but script parts works here; <code>modelgen describe</code> has the full reference.</p>
+      </div>
       <div id="issues" class="issues" aria-live="polite"></div>
-      <p class="note">Units are meters, +y is up, +z is the front. Every shape, material and texture works here except script parts; <code>modelgen describe</code> has the full reference.</p>
-    </section>
+    </aside>
   </main>
 </body>
 </html>

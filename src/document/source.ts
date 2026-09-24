@@ -15,7 +15,8 @@ const keyOf = (p: YAML.Pair) => (YAML.isScalar(p.key) ? String(p.key.value) : St
 const partName = (n: unknown) => (YAML.isMap(n) ? n.get("name") : undefined);
 
 const isFlow = (n: unknown) => YAML.isCollection(n) && !!n.flow;
-const SHAPES = new Set<string>(PART_KEYS.slice(1, PART_KEYS.indexOf("position")));
+// Groups hold whole parts and are always written as blocks, so they never copy a shape's inline style.
+const SHAPES = new Set<string>(PART_KEYS.slice(1, PART_KEYS.indexOf("position")).filter(k => k !== "group"));
 const setFlow = (n: unknown) => { if (YAML.isCollection(n)) n.flow = true; };
 
 // New maps copy their neighbours' style: a value is written {inline} when the same key
@@ -52,6 +53,8 @@ function insertPair(map: YAML.YAMLMap, pair: YAML.Pair, order?: string[]) {
 function sync(ctx: Ctx, node: unknown, value: Plain, order?: string[], itemOrder?: string[]): YAML.Node {
   if (isObj(value)) {
     if (!YAML.isMap(node)) return fresh(ctx, node, value);
+    // Style is judged before removals, so a renamed entry still matches the entry it replaced.
+    const inline = node.items.some(p => isFlow(p.value));
     node.items = node.items.filter(p => keyOf(p) in value);
     for (const [k, v] of Object.entries(value)) {
       const pair = node.items.find(p => keyOf(p) === k);
@@ -59,7 +62,7 @@ function sync(ctx: Ctx, node: unknown, value: Plain, order?: string[], itemOrder
       if (pair) pair.value = sync(ctx, pair.value, v, undefined, childItems);
       else {
         const created = fresh(ctx, undefined, v);
-        if (node.items.some(p => isFlow(p.value))) setFlow(created);
+        if (inline && k !== "group") setFlow(created);
         insertPair(node, ctx.doc.createPair(k, created), order);
       }
     }
@@ -69,6 +72,7 @@ function sync(ctx: Ctx, node: unknown, value: Plain, order?: string[], itemOrder
     if (!YAML.isSeq(node)) return fresh(ctx, node, value);
     if (itemOrder === PART_KEYS) {
       node.items = syncParts(ctx, node.items, value);
+      if (node.items.length) node.flow = false; // "parts: []" opens up once it has parts
       return node;
     }
     node.items = value.map((v, i) => (i < node.items.length ? sync(ctx, node.items[i], v) : fresh(ctx, undefined, v)));
@@ -97,6 +101,9 @@ function syncParts(ctx: Ctx, olds: unknown[], values: Plain[]): YAML.Node[] {
     if (n) return sync(ctx, n, v, PART_KEYS);
     const created = fresh(ctx, undefined, v);
     styleLike(created, olds.find(YAML.isMap));
+    // A new group's children may be existing parts moved into it: reuse their nodes too.
+    const kids = YAML.isMap(created) ? created.getIn(["group", "parts"], true) : undefined;
+    if (YAML.isSeq(kids) && isObj(v) && isObj(v.group) && Array.isArray(v.group.parts)) kids.items = syncParts(ctx, [], v.group.parts);
     return created;
   });
 }
