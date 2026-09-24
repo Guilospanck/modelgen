@@ -7,6 +7,9 @@ game engines, desktop) and **USDZ** (iOS, macOS, AR Quick Look).
 
 Models are plain YAML files you can read, version and edit by hand.
 
+**[Try it in your browser →](https://guilospanck.github.io/modelgen/)** Edit a
+model, see it in 3D and download it, with nothing to install.
+
 ## Install
 
 ```sh
