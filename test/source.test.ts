@@ -2,7 +2,7 @@ import { test, expect } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as YAML from "yaml";
-import { editText } from "../src/document/source";
+import { defineMaterials, editText } from "../src/document/source";
 import { applyEdit } from "../src/document/ops";
 import { parseModelText, validateDocument, OpError, type ModelDoc } from "../src/document";
 
@@ -123,4 +123,13 @@ test("a renamed material keeps its inline style; groups are always blocks", () =
   const empty = editText(src, [{ add: { part: { name: "g", group: { parts: [] } } } }]).text;
   expect(empty).toContain("    group:\n      parts: []\n");
   expect(editText(empty, [{ reparent: { name: "a", parent: "g" } }]).text).toContain("      parts:\n        - name: a\n          box: {size: [1, 1, 1]}\n");
+});
+
+test("defineMaterials adds what parts reference, keeping comments", () => {
+  const src = "modelgen: 1\nname: x # hi\nparts:\n  # the part\n  - name: a\n    box: {size: [1, 1, 1]}\n    material: wood\n";
+  const fixed = defineMaterials(src, ["wood"]);
+  expect(fixed).toBe("modelgen: 1\nname: x # hi\nmaterials:\n  wood: {color: \"#c8c2b4\"}\nparts:\n  # the part\n  - name: a\n    box: {size: [1, 1, 1]}\n    material: wood\n");
+  expect(validateDocument(parseModelText(fixed, "m.yaml")).doc).toBeDefined();
+  expect(defineMaterials(SRC, ["iron"])).toBe(SRC); // already there: nothing changes
+  expect(defineMaterials("modelgen: 1\nname: x\nmaterials:\nparts: []\n", ["m"])).toBe('modelgen: 1\nname: x\nmaterials:\n  m: {color: "#c8c2b4"}\nparts: []\n');
 });

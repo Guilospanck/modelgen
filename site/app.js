@@ -1,4 +1,4 @@
-import { buildModel, editModel, parseModel, PATTERNS, VERSION } from "./modelgen.js";
+import { buildModel, defineMaterials, editModel, parseModel, PATTERNS, VERSION } from "./modelgen.js";
 import { createViewer, niceStep } from "./viewer.js";
 import { renderTree, renderProperties, renderMaterials, h } from "./panels.js";
 import { SHAPES, handlesFor, insidePoint, movePoint, round, uniqueName, allParts } from "./shapes.js";
@@ -132,22 +132,48 @@ function render() {
   const hit = find(state.selected);
   renderTree($("tree"), { doc: state.doc, selected: state.selected, problems, select, edit });
   renderProperties($("props"), {
-    doc: state.doc, part: hit?.part, parent: hit?.parent, problems: state.issues, edit, select,
+    doc: state.doc, part: hit?.part, parent: hit?.parent, problems: state.issues, edit, select, fixable, fix,
     newMaterial: partName => {
       const name = uniqueName("material", new Set(Object.keys(state.doc.materials ?? {})));
       edit([{ set_material: { name, material: { color: "#c8c2b4", roughness: 0.6 } } }, { update: { name: partName, set: { material: name } } }]);
     },
   });
-  renderMaterials($("materials"), { doc: state.doc, edit, patterns: PATTERNS });
+  renderMaterials($("materials"), { doc: state.doc, edit, say, patterns: PATTERNS });
+}
+
+// ---------- quick fixes ----------
+
+// The problems with an obvious fix: a floating part (move it to touch the model) and a material
+// used but never defined (define it). The rest need a person to decide.
+const missingMaterial = i => (i.code === "invalid" && i.message.match(/unknown material "(.+)"$/)?.[1]) || null;
+const fixable = i => (i.code === "floating" && !!i.part) || !!missingMaterial(i);
+
+function fix(issues) {
+  const materials = [...new Set(issues.map(missingMaterial).filter(Boolean))];
+  if (materials.length) {
+    setText(defineMaterials(state.text, materials));
+    say(`Defined ${materials.map(m => `"${m}"`).join(", ")}. Pick its color in Materials.`);
+    return;
+  }
+  const floating = issues.filter(i => i.code === "floating").map(i => i.part);
+  const moves = viewer.touchFix(floating);
+  const ops = Object.entries(moves).map(([name, position]) => ({ update: { name, set: { position: round(position) } } }));
+  if (ops.length && edit(ops)) say(ops.length === 1 ? `Moved "${ops[0].update.name}" to touch the model.` : `Moved ${ops.length} parts to touch the model.`);
+  else if (!ops.length) say("Couldn't work out where to move it; drag it onto the model instead.");
 }
 
 function renderIssues() {
-  $("issues").replaceChildren(...state.issues.map(i => h("div", { class: `issue ${i.severity}` },
-    h("p", {},
-      i.part ? h("button", { type: "button", class: "link", onclick: () => { showTab("scene"); select(i.part); } }, i.part) : null,
-      i.part ? ": " : null,
-      i.message.replace(/^model\.yaml:?\s*/, "")),
-    i.hint ? h("p", { class: "hint" }, i.hint) : null)));
+  const fixes = state.issues.filter(fixable);
+  $("issues").replaceChildren(...[
+    fixes.length > 1 ? h("div", { class: "issues-head" }, h("span", {}, `${state.issues.length} problems`), h("button", { type: "button", class: "small primary", onclick: () => fix(fixes) }, "Fix all")) : null,
+    ...state.issues.map(i => h("div", { class: `issue ${i.severity}` },
+      h("p", {},
+        i.part ? h("button", { type: "button", class: "link", onclick: () => { showTab("scene"); select(i.part); } }, i.part) : null,
+        i.part ? ": " : null,
+        i.message.replace(/^model\.yaml:?\s*/, "")),
+      i.hint ? h("p", { class: "hint" }, i.hint) : null,
+      fixable(i) ? h("button", { type: "button", class: "small primary", onclick: () => fix([i]) }, "Fix") : null)),
+  ].filter(Boolean));
 }
 
 // ---------- adding parts ----------

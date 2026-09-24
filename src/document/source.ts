@@ -150,3 +150,27 @@ export function editText(text: string, ops: unknown, opts: EditOptions & { json?
   if (!same(ydoc.toJS(), JSON.parse(JSON.stringify(doc)))) return printed();
   return { text: ydoc.toString(YAML_PRINT), doc, changes, applied };
 }
+
+// Defines materials that parts use but nobody declared: the quick fix for "unknown material".
+// Works on text that doesn't validate yet (that's the point), keeping comments.
+export function defineMaterials(text: string, names: string[], color = "#c8c2b4"): string {
+  const ydoc = YAML.parseDocument(text);
+  if (ydoc.errors.length || !YAML.isMap(ydoc.contents)) return text;
+  const top = ydoc.contents as YAML.YAMLMap<unknown, unknown>;
+  const found: unknown = top.get("materials", true);
+  let map: YAML.YAMLMap;
+  if (YAML.isMap(found)) map = found;
+  else {
+    map = ydoc.createNode({}) as YAML.YAMLMap;
+    if (top.has("materials")) top.set("materials", map); // "materials:" with nothing under it
+    else insertPair(top, ydoc.createPair("materials", map), TOP_KEYS);
+  }
+  const inline = !map.items.length || map.items.some(p => isFlow(p.value));
+  for (const name of names) {
+    if (map.has(name)) continue;
+    const node = ydoc.createNode({ color }) as YAML.Node;
+    if (inline) setFlow(node);
+    map.items.push(ydoc.createPair(name, node));
+  }
+  return ydoc.toString(YAML_PRINT);
+}

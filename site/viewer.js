@@ -277,6 +277,39 @@ export function createViewer(container, on = {}) {
       const obj = selected && nodes.get(selected.name);
       if (obj) orbit.target.copy(new THREE.Box3().setFromObject(obj).getCenter(new THREE.Vector3()));
     },
+    // Quick fix for floating parts: each named part moves (in its parent's space) by the gap between
+    // its closest point and the closest point of the rest of the model, plus a little overlap.
+    // Returns { name: new position }.
+    touchFix(names) {
+      if (!model) return {};
+      const moving = new Set(names), v = new THREE.Vector3();
+      const ownerOf = o => { while (o && !o.userData.part) o = o.parent; return o?.userData.part; };
+      const sample = (root, keep) => {
+        const pts = [];
+        root.traverse(o => {
+          if (!o.isMesh || handles.includes(o) || !keep(o)) return;
+          const pos = o.geometry.attributes.position, st = Math.max(1, Math.floor(pos.count / 600));
+          for (let i = 0; i < pos.count; i += st) pts.push(v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld).clone());
+        });
+        return pts;
+      };
+      model.updateMatrixWorld(true);
+      const rest = sample(model, o => !moving.has(ownerOf(o)));
+      const out = {};
+      for (const name of names) {
+        const obj = nodes.get(name);
+        if (!obj || !rest.length) continue;
+        let best = Infinity, from = null, to = null;
+        for (const p of sample(obj, () => true))
+          for (const q of rest) { const d = p.distanceToSquared(q); if (d < best) { best = d; from = p; to = q; } }
+        if (!from) continue;
+        const gap = to.clone().sub(from);
+        if (gap.lengthSq() > 0) gap.add(gap.clone().normalize().multiplyScalar(fit.radius * 0.02));
+        const world = obj.getWorldPosition(new THREE.Vector3()).add(gap);
+        out[name] = obj.parent.worldToLocal(world).toArray();
+      }
+      return out;
+    },
     // Where a ray straight down through the model's middle first meets it: a spot new parts can touch.
     surfacePoint() {
       if (!model) return null;

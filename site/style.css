@@ -222,6 +222,8 @@ textarea:focus-visible { outline-offset: -2px; }
 
 .issues { max-height: 30%; overflow: auto; border-top: 1px solid var(--line); }
 .issues:empty { display: none; }
+.issues-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.issue > .small { margin-top: 6px; }
 .issue { padding: 8px 14px; border-left: 3px solid var(--error); }
 .issue + .issue { border-top: 1px solid var(--line); }
 .issue.warning { border-left-color: var(--warn); }

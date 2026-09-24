@@ -3,7 +3,7 @@
 import { OpError, type Issue } from "./document/issues";
 import { parseModelText } from "./document/text";
 import { validateDocument } from "./document/validate";
-import { editText } from "./document/source";
+import { defineMaterials, editText } from "./document/source";
 import type { ModelDoc } from "./document/schema";
 import { compileTree } from "./scene/tree";
 import { exportModelFiles, FORMATS, type ExportedFile, type Format } from "./export/model";
@@ -49,3 +49,5 @@ export function editModel(text: string, ops: unknown[], opts: { json?: boolean }
     return { text: r.text, changes: r.changes, issues: [] };
   }, { changes: [] });
 }
+
+export { defineMaterials };

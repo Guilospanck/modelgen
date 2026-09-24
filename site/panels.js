@@ -129,7 +129,7 @@ function fieldControl(kind, value, commit, path) {
   return h("code", {}, JSON.stringify(value));
 }
 
-export function renderProperties(root, { doc, part, parent, problems, edit, select, newMaterial }) {
+export function renderProperties(root, { doc, part, parent, problems, edit, select, newMaterial, fixable, fix }) {
   if (!part) {
     root.replaceChildren(h("p", { class: "empty" }, "Select a part in the viewport or the list to edit it."));
     return;
@@ -182,7 +182,10 @@ export function renderProperties(root, { doc, part, parent, problems, edit, sele
   sections.push(row("Visible", h("input", { type: "checkbox", checked: part.visible !== false, onchange: e => update({ visible: e.target.checked ? null : false }) })));
 
   const problemsHere = problems.filter(i => i.part === name);
-  if (problemsHere.length) sections.unshift(h("div", { class: "issue error" }, problemsHere.map(i => h("p", {}, i.message)), problemsHere[0].hint ? h("p", { class: "hint" }, problemsHere[0].hint) : null));
+  if (problemsHere.length) sections.unshift(h("div", { class: "issue error" },
+    problemsHere.map(i => h("p", {}, i.message)),
+    problemsHere[0].hint ? h("p", { class: "hint" }, problemsHere[0].hint) : null,
+    problemsHere.some(fixable) ? h("button", { type: "button", class: "small primary", onclick: () => fix(problemsHere.filter(fixable)) }, "Fix") : null));
 
   const taken = new Set(), walk = ps => ps.forEach(p => { taken.add(p.name); if (p.group) walk(p.group.parts); });
   walk(doc.parts);
@@ -194,7 +197,7 @@ export function renderProperties(root, { doc, part, parent, problems, edit, sele
 
 // ---------- materials ----------
 
-export function renderMaterials(root, { doc, edit, patterns }) {
+export function renderMaterials(root, { doc, edit, say, patterns }) {
   const mats = doc.materials ?? {};
   const users = {}, walk = ps => ps.forEach(p => { if (p.material) (users[p.material] ??= []).push(p.name); if (p.group) walk(p.group.parts); });
   walk(doc.parts);
@@ -219,9 +222,14 @@ export function renderMaterials(root, { doc, edit, patterns }) {
         h("input", { type: "color", value: m.color, "aria-label": `${name} color`, onchange: e => set({ color: e.target.value }) }),
         h("input", { class: "material-name", value: name, "aria-label": "Material name", dataset: { path: `mat.${name}` }, onchange: e => rename(e.target.value.trim()) }),
         h("span", { class: "users" }, users[name] ? `${users[name].length} part${users[name].length > 1 ? "s" : ""}` : "unused"),
+        // Deleting a material in use leaves its parts plain; one undo brings it all back.
         h("button", {
-          type: "button", class: "icon", title: users[name] ? "Used by parts; change them first" : "Delete material", "aria-label": `Delete ${name}`,
-          disabled: !!users[name], onclick: () => edit([{ remove_material: { name } }]),
+          type: "button", class: "icon", title: "Delete material", "aria-label": `Delete ${name}`,
+          onclick: () => {
+            const parts = users[name] ?? [];
+            if (edit([...parts.map(p => ({ update: { name: p, set: { material: null } } })), { remove_material: { name } }]) && parts.length)
+              say(`Deleted "${name}"; ${parts.length === 1 ? "1 part has" : `${parts.length} parts have`} no material now. Undo brings it back.`);
+          },
         }, "×")),
       slider("roughness", "Roughness", 0, 0.5),
       slider("metalness", "Metalness", 0, 0),
