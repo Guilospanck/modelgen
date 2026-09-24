@@ -11,12 +11,11 @@ const yaml = $("yaml"), status = $("status");
 // The YAML text is the model. Every edit, from any panel or the viewport, produces new text;
 // history is a list of texts. source says where the open model came from (an example, a new
 // canvas, a shared link, or a model saved in this browser, with its id); savedText is the text
-// as last opened or saved, so changes since then are unsaved.
+// as last opened or saved, so a change since then is still to be saved.
 const state = {
   text: "", doc: null, issues: [], selected: null, point: null, files: {}, name: "model", history: [], at: -1,
   source: { kind: "example", id: null }, savedText: "",
 };
-const dirty = () => state.text !== state.savedText;
 
 const viewer = createViewer($("viewer"), {
   scale: step => { $("scale").textContent = `Grid squares: ${step}`; },
@@ -39,7 +38,6 @@ const viewer = createViewer($("viewer"), {
 });
 
 const examples = await (await fetch("examples.json")).json();
-const EMPTY = "modelgen: 1\nname: untitled\nparts: []\n";
 
 // ---------- model text, history, edits ----------
 
@@ -60,6 +58,7 @@ function setText(text, { record = true, merge = false } = {}) {
   state.doc = parsed.doc ?? null;
   if (state.selected && !find(state.selected)) { state.selected = null; state.point = null; }
   rebuild(parsed);
+  scheduleSave();
 }
 
 // Applies modelgen edit ops; false (and a message) when modelgen refuses them.
@@ -130,12 +129,10 @@ function select(name, point = null) {
 
 function render() {
   renderIssues();
-  const name = state.doc?.name ?? state.name, unsaved = dirty();
-  $("model-name").textContent = unsaved ? `${name} •` : name;
-  $("models").title = unsaved ? "Unsaved changes" : state.source.kind === "saved" ? "Saved in this browser" : "Not saved yet";
-  $("save").textContent = state.source.kind === "saved" && !unsaved ? "Saved" : "Save";
-  $("save").classList.toggle("primary", unsaved);
-  document.title = `${name}${unsaved ? " •" : ""} – modelgen playground`;
+  const name = state.doc?.name ?? state.name;
+  $("model-name").textContent = name;
+  document.title = `${name} – modelgen playground`;
+  renderSaveState();
   $("add").disabled = !state.doc;
   $("undo").disabled = state.at <= 0;
   $("redo").disabled = state.at >= state.history.length - 1;
@@ -307,9 +304,60 @@ const decode = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g
 
 // ---------- opening and saving models ----------
 
-// Opens a model with a fresh undo history, after asking about unsaved changes.
+// Every change saves itself a moment after the last one. An example, a new canvas or a shared
+// link is saved as a copy on its first change, so the examples themselves never change.
+const SAVE_DELAY = 600;
+let saveTimer = null, saving = Promise.resolve(), saveError = null;
+const remember = id => { try { if (id) localStorage.setItem("modelgen.last", id); else localStorage.removeItem("modelgen.last"); } catch { /* fine */ } };
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = state.text === state.savedText ? null : setTimeout(flush, SAVE_DELAY);
+  renderSaveState();
+}
+
+// Saves now; saves run one after another, so a slow one never lands after a newer one.
+function flush() {
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  saving = saving.then(async () => {
+    const text = state.text;
+    if (text === state.savedText) return;
+    try {
+      const saved = await saveModel({ id: state.source.kind === "saved" ? state.source.id : undefined, name: state.doc?.name ?? state.name, text });
+      state.source = { kind: "saved", id: saved.id };
+      state.savedText = text;
+      saveError = null;
+      remember(saved.id);
+    } catch (e) {
+      saveError = e.message;
+    }
+    renderSaveState();
+  });
+  return saving;
+}
+
+function renderSaveState() {
+  const el = $("save-state"), pending = saveTimer !== null || state.text !== state.savedText;
+  const [label, title, kind] =
+    saveError ? ["Not saved", `Couldn't save: ${saveError}`, "bad"]
+    : pending ? ["Saving…", "Changes save in this browser as you go", ""]
+    : state.source.kind === "saved" ? ["Saved", "Saved in this browser; changes save as you go", "ok"]
+    : ["Edits save a copy", "The first change saves a copy of this model in this browser", ""];
+  el.textContent = label;
+  el.title = title;
+  el.className = `save-state ${kind}`;
+}
+
+// A new canvas gets a name to go by until you pick one.
+const ADJECTIVES = ["amber", "brave", "calm", "cosmic", "dusty", "eager", "fuzzy", "gentle", "hollow", "jolly", "lucky", "misty", "nimble", "quiet", "rusty", "silver", "tiny", "velvet", "witty", "zesty"];
+const NOUNS = ["acorn", "anchor", "beacon", "cactus", "comet", "falcon", "harbor", "kettle", "lantern", "maple", "mitten", "nugget", "otter", "pebble", "pickle", "robot", "rocket", "teapot", "turnip", "walrus"];
+const pick = list => list[Math.floor(Math.random() * list.length)];
+const newModelText = () => `modelgen: 1\nname: ${pick(ADJECTIVES)}-${pick(NOUNS)}\nparts: []\n`;
+
+// Opens a model with a fresh undo history; the one being left is saved first.
 async function openModel(text, source) {
-  if (!(await leaveCurrent())) return false;
+  await flush();
   history.replaceState(null, "", location.pathname);
   state.selected = null;
   state.point = null;
@@ -317,47 +365,10 @@ async function openModel(text, source) {
   state.savedText = text;
   state.history = [];
   state.at = -1;
-  try { if (source.kind === "saved") localStorage.setItem("modelgen.last", source.id); else localStorage.removeItem("modelgen.last"); } catch { /* fine */ }
+  saveError = null;
+  remember(source.kind === "saved" ? source.id : null);
   setText(text);
   return true;
-}
-
-// true when it's fine to replace the open model: nothing unsaved, or the visitor chose.
-function leaveCurrent() {
-  if (!dirty()) return Promise.resolve(true);
-  const dialog = $("leave");
-  $("leave-name").textContent = state.doc?.name ?? state.name;
-  // The choice is taken from the buttons (and Escape) directly rather than the dialog's close
-  // event, which some browsers deliver late or not at all.
-  return new Promise(resolve => {
-    const done = async choice => {
-      dialog.removeEventListener("click", onClick);
-      dialog.removeEventListener("cancel", onCancel);
-      dialog.close();
-      resolve(choice === "save" ? await save() : choice === "discard");
-    };
-    const onClick = e => { const b = e.target.closest("button[value]"); if (b) { e.preventDefault(); done(b.value); } };
-    const onCancel = e => { e.preventDefault(); done("cancel"); };
-    dialog.addEventListener("click", onClick);
-    dialog.addEventListener("cancel", onCancel);
-    dialog.showModal();
-  });
-}
-
-// Saves into this browser: the first save of an example or new model makes a new entry.
-async function save() {
-  try {
-    const saved = await saveModel({ id: state.source.kind === "saved" ? state.source.id : undefined, name: state.doc?.name ?? state.name, text: state.text });
-    state.source = { kind: "saved", id: saved.id };
-    state.savedText = state.text;
-    try { localStorage.setItem("modelgen.last", saved.id); } catch { /* fine */ }
-    say(`Saved "${saved.name}" in this browser`);
-    render();
-    return true;
-  } catch (e) {
-    say(`Couldn't save: ${e.message}`);
-    return false;
-  }
 }
 
 const modelsMenu = $("models-menu");
@@ -374,8 +385,10 @@ async function fillModelsMenu() {
       onclick: async e => {
         e.stopPropagation();
         if (!del.classList.contains("armed")) { del.classList.add("armed"); del.textContent = "Delete?"; return; }
+        await flush();
         await deleteModel(m.id);
-        if (state.source.kind === "saved" && state.source.id === m.id) { state.source = { kind: "new", id: null }; state.savedText = ""; render(); }
+        // The open model stays open, unsaved; its next change saves it again as a new copy.
+        if (state.source.kind === "saved" && state.source.id === m.id) { state.source = { kind: "new", id: null }; remember(null); renderSaveState(); }
         say(`Deleted "${m.name}"`);
         fillModelsMenu();
       },
@@ -385,9 +398,9 @@ async function fillModelsMenu() {
       del);
   };
   modelsMenu.replaceChildren(
-    item("New model", () => openModel(EMPTY, { kind: "new", id: null })),
+    item("New model", () => openModel(newModelText(), { kind: "new", id: null })),
     h("p", { class: "menu-head" }, "Saved in this browser"),
-    ...(saved.length ? saved.map(row) : [h("p", { class: "menu-note" }, "Nothing saved yet. Save keeps the open model here.")]),
+    ...(saved.length ? saved.map(row) : [h("p", { class: "menu-note" }, "Nothing yet. Your changes save here as you make them.")]),
     h("p", { class: "menu-head" }, "Examples"),
     ...examples.map(e => item(e.name, () => openModel(e.text, { kind: "example", id: null }))),
   );
@@ -406,12 +419,12 @@ modelsMenu.addEventListener("keydown", e => {
   if (e.key === "ArrowDown") { e.preventDefault(); items[(i + 1) % items.length].focus(); }
   if (e.key === "ArrowUp") { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
 });
-$("save").addEventListener("click", save);
 document.addEventListener("keydown", e => {
-  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); save(); }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); flush(); }
 });
-// Closing the tab with unsaved changes gets the browser's own warning.
-addEventListener("beforeunload", e => { if (dirty()) e.preventDefault(); });
+// Leaving or hiding the tab saves at once; if a save is still due, the browser asks first.
+addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
+addEventListener("beforeunload", e => { if (state.text !== state.savedText) { flush(); e.preventDefault(); } });
 
 function renameCurrentModel(name) {
   const r = renameModel(state.text, name);

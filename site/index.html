@@ -34,7 +34,7 @@
       <button id="models" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="models-menu"><span id="model-name">model</span></button>
       <div id="models-menu" class="popup models-popup" role="menu" hidden></div>
     </div>
-    <button id="save" type="button" title="Save in this browser (⌘S)">Save</button>
+    <span id="save-state" class="save-state" aria-live="polite"></span>
     <div class="end">
       <button id="share" type="button">Copy link</button>
       <button id="glb" type="button" class="primary" disabled>Download GLB</button>
@@ -85,17 +85,5 @@
       <div id="issues" class="issues" aria-live="polite"></div>
     </aside>
   </main>
-
-  <dialog id="leave" class="leave" aria-labelledby="leave-title">
-    <form method="dialog">
-      <p id="leave-title" class="title">Save changes to <span id="leave-name"></span>?</p>
-      <p class="hint">Otherwise they're lost when the other model opens.</p>
-      <div class="row-buttons">
-        <button value="save" class="primary">Save</button>
-        <button value="discard">Don't save</button>
-        <button value="cancel">Cancel</button>
-      </div>
-    </form>
-  </dialog>
 </body>
 </html>

@@ -283,7 +283,7 @@ textarea:focus-visible { outline-offset: -2px; }
   .history .scroll { max-height: 40vh; }
 }
 
-/* ---------- models menu, save, leave dialog ---------- */
+/* ---------- models menu, save state ---------- */
 #models { max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #models::after { content: " ▾"; color: var(--muted); }
 .models-popup { min-width: 260px; max-height: 70vh; overflow: auto; }
@@ -296,7 +296,6 @@ textarea:focus-visible { outline-offset: -2px; }
 .saved-row .when { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .saved-row .icon.armed { color: var(--error); font-size: 12px; font-weight: 600; }
 .empty-canvas { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0; padding: 10px 16px; border-radius: 8px; background: rgb(0 0 0 / 0.35); color: #fff; }
-.leave { border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; background: var(--paper); color: var(--ink); max-width: 360px; }
-.leave::backdrop { background: rgb(0 0 0 / 0.35); }
-.leave .title { margin: 0 0 4px; font-weight: 600; }
-.leave .hint { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+.save-state { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.save-state.ok::before { content: "✓ "; color: var(--ok); }
+.save-state.bad { color: var(--error); }
