@@ -70,7 +70,6 @@ jobs:
     # macOS: brew is on PATH for the formula style check.
     runs-on: macos-15
     env:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       HOMEBREW_TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
     steps:
       - uses: actions/checkout@v4
@@ -79,7 +78,7 @@ jobs:
           bun-version: 1.2.23
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org
       - uses: actions/download-artifact@v4
         with:
@@ -106,11 +105,23 @@ jobs:
             --generate-notes
 
       - run: bun install --frozen-lockfile && bun run build:npm
-      - name: npm (skipped until the NPM_TOKEN secret exists)
-        if: env.NPM_TOKEN != ''
-        run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # npm trusted publishing: no token. npm exchanges this job's OIDC identity
+      # (permissions: id-token: write) for a short-lived publish credential and
+      # attaches provenance automatically. Configured on npmjs.com under the
+      # package's Settings → Trusted Publisher (GitHub Actions, repo
+      # Guilospanck/modelgen, workflow release.yml). Needs npm >= 11.5.1.
+      - name: Publish to npm (trusted publishing)
+        run: |
+          set -euo pipefail
+          npm install -g npm@^11.5.1
+          name="$(node -p 'require("./package.json").name')"
+          ver="$(node -p 'require("./package.json").version')"
+          # A re-run of a release whose npm step already succeeded skips instead of failing.
+          if npm view "$name@$ver" version >/dev/null 2>&1; then
+            echo "$name@$ver is already on npm; nothing to publish."
+          else
+            npm publish --access public
+          fi
 
       - name: Update Homebrew formula in tap (skipped until `just setup-tap-key` has run)
         if: env.HOMEBREW_TAP_DEPLOY_KEY != ''
