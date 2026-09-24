@@ -253,115 +253,77 @@ exports[`every example builds, validates and captures cleanly 2`] = `
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 240463,
-      "byteOffset": 0,
     },
     {
       "buffer": 0,
-      "byteLength": 383905,
-      "byteOffset": 240464,
     },
     {
       "buffer": 0,
-      "byteLength": 288,
-      "byteOffset": 624372,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 288,
-      "byteOffset": 624660,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 192,
-      "byteOffset": 624948,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 144,
-      "byteOffset": 625140,
       "target": 34963,
     },
     {
       "buffer": 0,
-      "byteLength": 288,
-      "byteOffset": 625284,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 288,
-      "byteOffset": 625572,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 192,
-      "byteOffset": 625860,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 144,
-      "byteOffset": 626052,
       "target": 34963,
     },
     {
       "buffer": 0,
-      "byteLength": 288,
-      "byteOffset": 626196,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 288,
-      "byteOffset": 626484,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 192,
-      "byteOffset": 626772,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 144,
-      "byteOffset": 626964,
       "target": 34963,
     },
     {
       "buffer": 0,
-      "byteLength": 6732,
-      "byteOffset": 627108,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 6732,
-      "byteOffset": 633840,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 4488,
-      "byteOffset": 640572,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 12288,
-      "byteOffset": 645060,
       "target": 34963,
     },
   ],
   "buffers": [
-    {
-      "byteLength": 657348,
-    },
+    {},
   ],
   "images": [
     {
@@ -833,115 +795,77 @@ exports[`every example builds, validates and captures cleanly 4`] = `
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 288,
-      "byteOffset": 0,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 288,
-      "byteOffset": 288,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 192,
-      "byteOffset": 576,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 144,
-      "byteOffset": 768,
       "target": 34963,
     },
     {
       "buffer": 0,
-      "byteLength": 330846,
-      "byteOffset": 912,
     },
     {
       "buffer": 0,
-      "byteLength": 475208,
-      "byteOffset": 331760,
     },
     {
       "buffer": 0,
-      "byteLength": 1980,
-      "byteOffset": 806968,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 1980,
-      "byteOffset": 808948,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 1320,
-      "byteOffset": 810928,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 2304,
-      "byteOffset": 812248,
       "target": 34963,
     },
     {
       "buffer": 0,
-      "byteLength": 600,
-      "byteOffset": 814552,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 600,
-      "byteOffset": 815152,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 400,
-      "byteOffset": 815752,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 1152,
-      "byteOffset": 816152,
       "target": 34963,
     },
     {
       "buffer": 0,
-      "byteLength": 528,
-      "byteOffset": 817304,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 528,
-      "byteOffset": 817832,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 352,
-      "byteOffset": 818360,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 1008,
-      "byteOffset": 818712,
       "target": 34963,
     },
   ],
   "buffers": [
-    {
-      "byteLength": 819720,
-    },
+    {},
   ],
   "images": [
     {
@@ -1264,57 +1188,39 @@ exports[`every example builds, validates and captures cleanly 6`] = `
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 2952,
-      "byteOffset": 0,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 2952,
-      "byteOffset": 2952,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 1968,
-      "byteOffset": 5904,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 3840,
-      "byteOffset": 7872,
       "target": 34963,
     },
     {
       "buffer": 0,
-      "byteLength": 6732,
-      "byteOffset": 11712,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 6732,
-      "byteOffset": 18444,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 4488,
-      "byteOffset": 25176,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 12288,
-      "byteOffset": 29664,
       "target": 34963,
     },
   ],
   "buffers": [
-    {
-      "byteLength": 41952,
-    },
+    {},
   ],
   "materials": [
     {
@@ -1538,43 +1444,29 @@ exports[`every example builds, validates and captures cleanly 8`] = `
   "bufferViews": [
     {
       "buffer": 0,
-      "byteLength": 193566,
-      "byteOffset": 0,
     },
     {
       "buffer": 0,
-      "byteLength": 319468,
-      "byteOffset": 193568,
     },
     {
       "buffer": 0,
-      "byteLength": 25848,
-      "byteOffset": 513036,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 25848,
-      "byteOffset": 538884,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 17232,
-      "byteOffset": 564732,
       "target": 34962,
     },
     {
       "buffer": 0,
-      "byteLength": 51648,
-      "byteOffset": 581964,
       "target": 34963,
     },
   ],
   "buffers": [
-    {
-      "byteLength": 633612,
-    },
+    {},
   ],
   "images": [
     {

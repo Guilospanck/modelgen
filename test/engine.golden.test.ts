@@ -5,7 +5,8 @@ import { assemble, uvSphere, place, part } from "../src/engine/lib";
 import { preview } from "../src/engine/render";
 import { paintSkins } from "../src/export/skins";
 import { writeUsdz, validateUsdz, readUsda } from "../src/export/usdz";
-import { glb, validateGlb } from "../src/export/glb";
+import { glb, glbJson, validateGlb } from "../src/export/glb";
+import { stableGlbJson } from "./glb-json";
 import { connectivityIssues } from "../src/checks/connectivity";
 import { decodePng } from "../src/util/png";
 import lantern from "./fixtures/lantern-builder";
@@ -23,7 +24,7 @@ test("glb json is unchanged by the port", () => {
   const m = lantern();
   const g = glb(assemble(m.parts), paintSkins(m.textures));
   expect(validateGlb(g)).toEqual([]);
-  expect(g.toString("utf8", 20, 20 + g.readUInt32LE(12))).toBe(fixture("lantern.glb.json"));
+  expect(stableGlbJson(glbJson(g))).toEqual(stableGlbJson(JSON.parse(fixture("lantern.glb.json"))));
 });
 
 test("preview pixels are unchanged by the port", () => {

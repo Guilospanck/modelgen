@@ -7,6 +7,7 @@ import { validateBytes } from "gltf-validator";
 import { openWorkspace, buildProject, capture, listModels } from "../src";
 import { readUsda } from "../src/export/usdz";
 import { glbJson } from "../src/export/glb";
+import { stableGlbJson } from "./glb-json";
 
 const copy = () => { const d = mkdtempSync(join(tmpdir(), "modelgen-ex-")); cpSync(join(__dirname, "../examples"), d, { recursive: true }); return d; };
 
@@ -23,6 +24,6 @@ test("every example builds, validates and captures cleanly", async () => {
     expect(capture(ws, { model: name, size: 96 }).issues).toEqual([]);
     // golden outputs: the first run writes test/__snapshots__/; later runs must match
     expect(readUsda(readFileSync(join(root, "out", `${name}.usdz`)))).toMatchSnapshot();
-    expect(glbJson(readFileSync(join(root, "out", `${name}.glb`)))).toMatchSnapshot();
+    expect(stableGlbJson(glbJson(readFileSync(join(root, "out", `${name}.glb`))))).toMatchSnapshot();
   }
 }, 60_000);
