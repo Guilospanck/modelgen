@@ -64,6 +64,9 @@ jobs:
 
   publish:
     needs: smoke
+    # Publishing (GitHub Release, npm, Homebrew tap) happens only for a pushed
+    # version tag — never for branch pushes, PRs or manual runs.
+    if: startsWith(github.ref, 'refs/tags/v')
     # macOS: brew is on PATH for the formula style check.
     runs-on: macos-15
     env:
