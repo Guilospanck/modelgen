@@ -1,6 +1,6 @@
 {
   "name": "@guilospanck/modelgen",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Generate 3D models (GLB, USDZ) from a CLI or an MCP server. Built for AI agents.",
   "license": "MIT",
   "author": "Guilherme Pereira",
