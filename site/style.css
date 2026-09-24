@@ -9,6 +9,7 @@
   --ruler-ink: #1e2a26;
   --error: #b43a28;
   --warn: #8a6a00;
+  --ok: #2f7a4f;
   --focus: #1d6fd6;
   --sans: "IBM Plex Sans", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -24,6 +25,7 @@
     --muted: #9aa8a1;
     --error: #f08a78;
     --warn: #e0c060;
+    --ok: #6cc08b;
     --focus: #7fb2ff;
     color-scheme: dark;
   }
@@ -242,14 +244,41 @@ textarea:focus-visible { outline-offset: -2px; }
 }
 
 /* ---------- Ask ---------- */
-.ask { display: grid; gap: 8px; padding: 12px 14px 16px; }
-.ask > .label { color: var(--muted); font-size: 13px; }
-.ask > .note { margin: 0; }
-.ask > button { justify-self: start; }
-.row-buttons { display: flex; gap: 8px; }
-.log { display: grid; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; font-size: 13px; }
-.log li { padding: 6px 10px; border-left: 3px solid var(--line); background: color-mix(in srgb, var(--panel) 50%, transparent); border-radius: 0 6px 6px 0; overflow-wrap: anywhere; }
-.log li.you { border-left-color: var(--ruler); }
-.log li.done { border-left-color: var(--mat); }
-.log li.error { border-left-color: var(--error); }
-.log pre { margin: 0; max-height: 200px; overflow: auto; font: 11.5px/1.4 var(--mono); white-space: pre-wrap; }
+/* The form stays put; only the history scrolls, in whatever height is left. */
+#panel-ask { overflow: hidden; }
+.ask { display: flex; flex-direction: column; height: 100%; }
+.ask-form { display: grid; gap: 8px; padding: 12px 14px; }
+.ask-form > .label { color: var(--muted); font-size: 13px; }
+.ask-form > .note { margin: 0; }
+.ask-form > button { justify-self: start; }
+
+.result { padding: 8px 10px; border-radius: 6px; border-left: 3px solid var(--line); background: color-mix(in srgb, var(--panel) 60%, transparent); font-size: 13px; }
+.result.ok { border-left-color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.result.warn { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.result.bad { border-left-color: var(--error); background: color-mix(in srgb, var(--error) 10%, transparent); }
+.result p, .result ul { margin: 0 0 4px; }
+.result ul { padding-left: 18px; }
+.result .title { font-weight: 600; }
+.result .hint { color: var(--muted); }
+.result button { margin-top: 4px; }
+.result textarea { margin-top: 4px; font: 11.5px/1.4 var(--mono); }
+
+.history { flex: 1; min-height: 0; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.history h3 { margin: 0; padding: 8px 14px 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.history .scroll { flex: 1; min-height: 0; overflow: auto; padding: 0 14px 12px; }
+.turns { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.turns:not(:empty) + .empty-note { display: none; }
+.empty-note { margin: 4px 0; color: var(--muted); font-size: 13px; }
+.turns > li { padding-left: 10px; border-left: 2px solid var(--ruler); }
+.turns .request { margin: 0 0 2px; font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.replies { margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: 12.5px; }
+.replies li { overflow-wrap: anywhere; }
+.replies li::before { content: "● "; font-size: 9px; vertical-align: 1px; }
+.replies li.ok::before { color: var(--ok); }
+.replies li.warn::before { color: var(--warn); }
+.replies li.bad::before { color: var(--error); }
+
+@media (max-width: 860px) {
+  #panel-ask { overflow: visible; }
+  .history .scroll { max-height: 40vh; }
+}
