@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>modelgen playground</title>
+  <meta name="description" content="Write a modelgen model in YAML and see it as a 3D model. Download GLB and USDZ. Runs entirely in your browser.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@4/dist/model-viewer.min.js"></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="bar">
+    <h1>modelgen <span>playground</span></h1>
+    <label class="pick">Example
+      <select id="example"></select>
+    </label>
+    <a class="repo" href="https://github.com/Guilospanck/modelgen">Install the CLI</a>
+  </header>
+
+  <main>
+    <section class="stage" aria-label="3D preview">
+      <div class="mat">
+        <model-viewer id="viewer" camera-controls touch-action="pan-y" shadow-intensity="0.8" exposure="1.05" interaction-prompt="none" alt="Preview of the model"></model-viewer>
+        <p id="stale" class="stale" hidden>Showing the last version that built. Fix the problems below to update it.</p>
+      </div>
+      <div class="actions">
+        <button id="glb" type="button" disabled>Download GLB</button>
+        <button id="usdz" type="button" disabled>Download USDZ</button>
+        <button id="share" type="button" class="quiet">Copy link</button>
+        <output id="status" aria-live="polite"></output>
+      </div>
+    </section>
+
+    <section class="source" aria-label="Model source">
+      <label for="yaml" class="visually-hidden">Model YAML</label>
+      <textarea id="yaml" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+      <div id="issues" class="issues" aria-live="polite"></div>
+      <p class="note">Units are meters, +y is up, +z is the front. Every shape, material and texture works here except script parts; <code>modelgen describe</code> has the full reference.</p>
+    </section>
+  </main>
+</body>
+</html>
