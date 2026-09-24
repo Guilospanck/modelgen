@@ -28,7 +28,8 @@ test("glb json is unchanged by the port", () => {
 });
 
 test("preview pixels are unchanged by the port", () => {
-  const { pixels } = decodePng(preview(lantern()));
+  // The views the golden was taken with (the defaults then); the renderer's output is what's pinned.
+  const { pixels } = decodePng(preview(lantern(), { views: [[205, 15], [270, 5], [155, 30]] }));
   expect(createHash("sha256").update(pixels).digest("hex") + "\n").toBe(fixture("lantern.preview.sha256"));
 });
 

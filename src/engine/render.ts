@@ -108,8 +108,9 @@ function toPNG(views, W, H) {
   return lib.encodePNG(px, total, H);
 }
 
-// Default views: 3/4 front-right, right profile, higher 3/4 front-left.
-const VIEWS = [[205, 15], [270, 5], [155, 30]];
+// Default views (yaw 0 looks at the front, +z): 3/4 front, side profile, higher 3/4 front
+// from the other side.
+const VIEWS = [[335, 15], [270, 5], [25, 30]];
 
 // Contact sheet of a builder's output ({ parts, textures }) as PNG bytes, one
 // panel per [yaw, pitch] in `views` (degrees).
@@ -122,7 +123,7 @@ function preview({ parts, textures }, { W = 340, H = 340, tex = 256, views = VIE
 
 // Frames of a life program (see life/dsl.js) across its cycle, as PNG bytes:
 // one panel per time in `frames` (seconds), so the motion can be judged.
-function lifePreview({ parts, textures }, prog, { frames = [0.6, 2.8, 5.2, 7.4, 9.9, 11.9, 13.7, 15.1], W = 200, H = 220, tex = 128, yaw = 215, pitch = 12 } = {}) {
+function lifePreview({ parts, textures }, prog, { frames = [0.6, 2.8, 5.2, 7.4, 9.9, 11.9, 13.7, 15.1], W = 200, H = 220, tex = 128, yaw = 325, pitch = 12 } = {}) {
   const groups = lib.assemble(parts);
   const texPix = {};
   for (const [id, spec] of Object.entries(textures || {})) texPix[id] = lib.paintSkin(spec, tex, true);
