@@ -63,6 +63,45 @@ check its work and export it.
 | `export` | write GLB / USDZ files |
 | `build` | export every output configured for the project |
 
+### What to ask
+
+Describe what you want; the agent does the rest.
+
+Make a model:
+
+- "Use modelgen to make a low-poly witch's lantern: lathed glass body, iron cap and handle. Capture it, fix any issues, and export GLB and USDZ to `assets/`."
+- "Create a wooden treasure chest with metal bands and a lock. Use the mottle texture for the wood. Show me the capture."
+- "Make a coffee mug with a handle, about 10 cm tall, and export it as GLB."
+- "Build a simple stylized tree: a tapered trunk (tube) and a blob canopy. Keep everything connected."
+
+Iterate on it:
+
+- "Show me the lantern from the front and from the top."
+- "The handle is too thin: make it twice as thick, then capture again."
+- "Make the body taller and give the paper material an orange emissive glow."
+- "Undo the last change."
+- "Duplicate the left chair leg to make the other three, mirrored."
+- "Inspect the chest and tell me which parts are floating."
+
+Export and projects:
+
+- "Set up a modelgen project here that exports GLB to `web/public/models` and USDZ to `ios/Models`, then build everything."
+- "Export just the `handle` part of the lantern as its own GLB."
+- "List my models and rebuild them."
+
+Learn what's possible:
+
+- "Ask modelgen which shapes and materials it supports."
+- "What texture patterns does modelgen have?"
+
+Tips:
+
+- **Ask for captures.** The agent sees the render plus a list of problems ("handle is floating, nearest part is cap, 0.04 away"); "capture it and fix everything it reports" gets noticeably better results.
+- **Give real sizes.** Units are meters: "a 30 cm lantern" beats "a small lantern".
+- **Name the building blocks when you care:** `lathe` for round things (vases, bottles, lamp bodies), `extrude` for flat profiles, `tube` for handles, pipes and limbs, `blob` for organic forms, groups for parts that move together.
+- **Models are files:** `models/<name>.model.yaml` in the project. You can read or hand-edit them; the agent picks up your edits.
+- **Current limits:** no boolean cut-outs or bevels yet (hollows are made with profiles), no ready-made kits (creature, furniture...), and script parts only when the server runs with `modelgen mcp --allow-scripts`.
+
 ## Use it yourself
 
 ```sh
