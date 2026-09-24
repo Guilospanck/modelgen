@@ -2,6 +2,7 @@ import { buildModel, defineMaterials, editModel, parseModel, PATTERNS, VERSION }
 import { createViewer, niceStep } from "./viewer.js";
 import { renderTree, renderProperties, renderMaterials, h } from "./panels.js";
 import { SHAPES, handlesFor, insidePoint, movePoint, round, uniqueName, allParts } from "./shapes.js";
+import { createAssistant } from "./assistant.js";
 
 const $ = id => document.getElementById(id);
 const yaml = $("yaml"), status = $("status");
@@ -218,13 +219,25 @@ function setMode(mode) {
 document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
 $("snap").addEventListener("change", e => viewer.setSnap(e.target.checked));
 
+// The Ask tab's model answers with edit ops; they go through the same path as every other edit.
+createAssistant($("ask"), {
+  state: () => ({ text: state.text, doc: state.doc, issues: state.issues }),
+  apply: ops => {
+    const r = editModel(state.text, ops);
+    if (!r.text) return { error: r.issues.map(i => i.message).join("; ") || "modelgen refused the ops" };
+    setText(r.text);
+    return { changes: r.changes };
+  },
+  say,
+});
+
 function showTab(name) {
-  for (const t of ["scene", "materials", "yaml"]) {
+  for (const t of ["scene", "ask", "materials", "yaml"]) {
     $(`tab-${t}`).setAttribute("aria-selected", String(t === name));
     $(`panel-${t}`).hidden = t !== name;
   }
 }
-for (const t of ["scene", "materials", "yaml"]) $(`tab-${t}`).addEventListener("click", () => showTab(t));
+for (const t of ["scene", "ask", "materials", "yaml"]) $(`tab-${t}`).addEventListener("click", () => showTab(t));
 
 function duplicateSelected() {
   const as = uniqueName(`${state.selected}-copy`, names());

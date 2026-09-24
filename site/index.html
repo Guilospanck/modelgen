@@ -60,12 +60,16 @@
     <aside class="side">
       <div class="tabs" role="tablist" aria-label="Sidebar">
         <button type="button" role="tab" id="tab-scene" aria-controls="panel-scene" aria-selected="true">Scene</button>
+        <button type="button" role="tab" id="tab-ask" aria-controls="panel-ask" aria-selected="false">Ask</button>
         <button type="button" role="tab" id="tab-materials" aria-controls="panel-materials" aria-selected="false">Materials</button>
         <button type="button" role="tab" id="tab-yaml" aria-controls="panel-yaml" aria-selected="false">YAML</button>
       </div>
       <div id="panel-scene" class="panel scene" role="tabpanel" aria-labelledby="tab-scene">
         <div id="tree" class="tree" role="tree" aria-label="Parts"></div>
         <div id="props" class="props"></div>
+      </div>
+      <div id="panel-ask" class="panel" role="tabpanel" aria-labelledby="tab-ask" hidden>
+        <div id="ask" class="ask"></div>
       </div>
       <div id="panel-materials" class="panel" role="tabpanel" aria-labelledby="tab-materials" hidden>
         <div id="materials" class="materials"></div>
