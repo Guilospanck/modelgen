@@ -154,13 +154,14 @@ parts:
 
 - Units are meters, +y is up, +z is the front, rotations are radians.
 - Shapes: `box`, `sphere`, `cylinder`, `cone`, `capsule`, `torus`, `plane`,
-  `extrude`, `lathe`, `tube`, `blob` (smooth organic forms) and `group`.
+  `extrude`, `lathe`, `tube`, `blob` (smooth organic forms), `text` (extruded
+  letters, e.g. `text: {string: Esc, size: 0.004, depth: 0.0004}`) and `group`.
 - Texture patterns: fur, feathers, scales, spots, stripes, mottle, flame, runes.
 - Parts must touch: floating parts are reported and block export.
 - `modelgen describe` has the full reference; `modelgen schema` prints the
   JSON Schema (for editor autocomplete).
 
-See [`examples/`](examples) for a lantern, a crate, a mug and a scripted pebble.
+See [`examples/`](examples) for a lantern, a crate, a mug, a keycap with a text legend and a scripted pebble.
 
 ## Projects
 
@@ -185,4 +186,5 @@ server runs with `modelgen mcp --allow-scripts`. See `modelgen describe scripts`
 
 ## License
 
-MIT
+MIT. The `text` shape's built-in font is IBM Plex Sans (SIL Open Font License
+1.1, see [`LICENSE-fonts.txt`](LICENSE-fonts.txt)).

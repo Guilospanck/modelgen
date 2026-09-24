@@ -2,7 +2,8 @@
 // and which of its points can be dragged in the viewport.
 
 // Field kinds: num, int (optional segments etc.), vec2, vec3, radius2 (number or [top, bottom]),
-// points2 / points3 (profiles and paths), nums (one number per point), blob (list of blob shapes).
+// points2 / points3 (profiles and paths), nums (one number per point), blob (list of blob shapes),
+// string (multi-line text), enum:a|b|c (one of the listed words).
 export const SHAPES = {
   box: { label: "Box", fields: [["size", "vec3"]], make: s => ({ size: [s, s, s] }) },
   sphere: { label: "Sphere", fields: [["radius", "num"], ["segments", "int", true]], make: s => ({ radius: s / 2 }) },
@@ -26,6 +27,11 @@ export const SHAPES = {
   blob: {
     label: "Blob", fields: [["shapes", "blob"], ["blend", "num", true], ["resolution", "int", true]],
     make: s => ({ shapes: [{ sphere: { center: [0, 0, 0], radius: s / 2 } }, { sphere: { center: [s / 2, s / 3, 0], radius: s / 3 } }] }),
+  },
+  text: {
+    label: "Text",
+    fields: [["string", "string"], ["size", "num"], ["depth", "num"], ["align", "enum:left|center|right", true], ["spacing", "num", true], ["lineHeight", "num", true], ["segments", "int", true]],
+    make: s => ({ string: "Text", size: s / 2, depth: s / 10, align: "center" }),
   },
 };
 

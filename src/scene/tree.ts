@@ -3,6 +3,7 @@ import { SHAPE_KEYS, type ModelDoc, type Part, type ShapeKey } from "../document
 import * as shapes from "../engine/shapes";
 import { tube as tubeMesh } from "../engine/lib";
 import * as sdf from "../engine/sdf";
+import { text } from "../engine/text";
 import type { EnginePart, Mesh, TextureSpec } from "../engine/types";
 import { trsOf, transformMesh, type TRS } from "./transform";
 import { enginePart, textureSpecs } from "./materials";
@@ -63,6 +64,7 @@ export function shapeMesh(p: Part): Mesh {
     const t = p.tube;
     return tubeMesh(t.path, t.radii ?? t.path.map(() => t.radius!), t.segments ?? 14, { exp: t.boxiness ?? 2 });
   }
+  if (p.text) return text(p.text);
   if (p.blob) {
     // sdf.ts is untyped JS: its trailing `k` (per-primitive blend override) is optional but reads as required.
     const prims = p.blob.shapes.flatMap((s): unknown[] => {

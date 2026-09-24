@@ -1,0 +1,17 @@
+modelgen: 1
+name: keycap
+materials:
+  plastic: {color: "#2b2d31", roughness: 0.55}
+  legend: {color: "#f2efe6", roughness: 0.4}
+parts:
+  # an 18 mm cap, 8 mm tall, sitting on the ground
+  - name: cap
+    box: {size: [0.018, 0.008, 0.018]}
+    position: [0, 0.004, 0]
+    material: plastic
+  # the legend lies on the top face: rotated to face up, back face flush with the cap
+  - name: legend
+    text: {string: Esc, size: 0.004, depth: 0.0004, align: center}
+    position: [0, 0.0082, 0]
+    rotation: [-1.5708, 0, 0]
+    material: legend

@@ -15,7 +15,7 @@ test("every example builds, validates and captures cleanly", async () => {
   const root = copy();
   const ws = openWorkspace(root);
   const names = listModels(ws).models.map(m => m.name);
-  expect(names).toEqual(["crate", "lantern", "mug", "pebble"]);
+  expect(names).toEqual(["crate", "keycap", "lantern", "mug", "pebble"]);
   const r = buildProject(ws);
   expect(r.failed).toEqual([]);
   for (const name of names) {

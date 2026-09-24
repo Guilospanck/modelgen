@@ -3,7 +3,7 @@ import { z } from "zod";
 export const PATTERNS = ["fur", "feathers", "scales", "spots", "stripes", "mottle", "flame", "runes"] as const;
 export const SLOTS = ["head", "neck", "back", "claws", "teeth", "tail", "fins", "companion"] as const;
 export const PLANS = ["quad", "winged_quad", "flyer", "perched", "cetacean", "fish", "seahorse", "seal", "turtle", "serpent", "kraken", "biped"] as const;
-export const SHAPE_KEYS = ["group", "box", "sphere", "cylinder", "cone", "capsule", "torus", "plane", "extrude", "lathe", "tube", "blob", "script"] as const;
+export const SHAPE_KEYS = ["group", "box", "sphere", "cylinder", "cone", "capsule", "torus", "plane", "extrude", "lathe", "tube", "blob", "text", "script"] as const;
 
 export type ShapeKey = (typeof SHAPE_KEYS)[number];
 export type Slot = (typeof SLOTS)[number];
@@ -33,6 +33,7 @@ export type Part = {
   lathe?: { profile: Vec2[]; segments?: number };
   tube?: { path: Vec3[]; radius?: number; radii?: Radius2[]; segments?: number; boxiness?: number };
   blob?: { shapes: BlobShape[]; blend?: number; resolution?: number };
+  text?: { string: string; size: number; depth: number; align?: "left" | "center" | "right"; spacing?: number; lineHeight?: number; segments?: number };
   script?: { module: string; params?: Record<string, unknown> };
 };
 export type ModelDoc = {
@@ -103,6 +104,10 @@ export const PartSchema = z.lazy(() => z.object({
     segments: segments.optional(), boxiness: z.number().min(2).max(8).optional(),
   }).strict().optional(),
   blob: z.object({ shapes: z.array(BlobShapeSchema).min(1), blend: pos.optional(), resolution: z.number().int().min(16).max(160).optional() }).strict().optional(),
+  text: z.object({
+    string: z.string().min(1).max(500), size: pos, depth: pos, align: z.enum(["left", "center", "right"]).optional(),
+    spacing: z.number().min(-0.5).max(5).optional(), lineHeight: pos.optional(), segments: z.number().int().min(1).max(16).optional(),
+  }).strict().optional(),
   script: z.object({ module: z.string().min(1), params: params.optional() }).strict().optional(),
 }).strict()) as unknown as z.ZodType<Part>;
 

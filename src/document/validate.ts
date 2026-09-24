@@ -1,5 +1,6 @@
 import { DocSchema, SHAPE_KEYS, type ModelDoc, type Part } from "./schema";
 import type { Issue } from "./issues";
+import { missingChars } from "../engine/text";
 
 export function formatPath(path: readonly PropertyKey[]): string {
   let s = "";
@@ -64,6 +65,10 @@ function semantic(doc: ModelDoc): Issue[] {
       if (t.radius !== undefined && t.radii !== undefined) e(`${at}.tube`, p.name, "use radius or radii, not both");
       if (t.radii && t.radii.length !== t.path.length)
         e(`${at}.tube.radii`, p.name, `has ${t.radii.length} entries but path has ${t.path.length} points`, "give one radius per path point");
+    }
+    if (p.text) {
+      const missing = missingChars(p.text.string);
+      if (missing.length) e(`${at}.text.string`, p.name, `the font has no ${missing.map(c => `"${c}"`).join(", ")}`, "letters, digits, punctuation, Latin-1 accents and – — ‘ ’ “ ” • … € ™ ↑ ↓ work; replace the rest");
     }
     if (p.lathe && p.lathe.profile.some(([r]) => r < 0)) e(`${at}.lathe.profile`, p.name, "radius (first value of each point) can't be negative");
     if (p.blob) p.blob.shapes.forEach((s, j) => {

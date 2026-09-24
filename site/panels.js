@@ -11,7 +11,7 @@ export function h(tag, props = {}, ...kids) {
     if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
     else if (k === "class") el.className = v;
     else if (k === "dataset") Object.assign(el.dataset, v);
-    else if (k in el && typeof v !== "string") el[k] = v;
+    else if (k === "value" || (k in el && typeof v !== "string")) el[k] = v; // a textarea's value is a property only
     else el.setAttribute(k, v === true ? "" : v);
   }
   el.append(...kids.flat().filter(k => k !== null && k !== undefined && k !== false));
@@ -82,6 +82,9 @@ export function renderTree(root, { doc, selected, problems, select, edit }) {
 
 function fieldControl(kind, value, commit, path) {
   if (kind === "num" || kind === "int") return numberInput(value, commit, { step: kind === "int" ? 1 : "any", path });
+  if (kind === "string") return h("textarea", { class: "field", rows: 2, value: value ?? "", dataset: { path }, onchange: e => e.target.value && commit(e.target.value) });
+  if (kind.startsWith("enum:")) return h("select", { dataset: { path }, onchange: e => commit(e.target.value || undefined) },
+    h("option", { value: "" }, "default"), kind.slice(5).split("|").map(o => h("option", { value: o, selected: o === value }, o)));
   if (kind === "vec3") return vecInputs(value, commit, { path });
   if (kind === "vec2") return vecInputs(value, commit, { labels: ["x", "y"], path });
   if (kind === "radius2") {
@@ -136,7 +139,8 @@ export function renderProperties(root, { doc, part, parent, problems, edit, sele
   }
   const name = part.name, shape = shapeOf(part);
   const update = set => edit([{ update: { name, set } }]);
-  const rot = (part.rotation ?? [0, 0, 0]).map(r => round(r * DEG));
+  // Degrees to 2 decimals: 1.5708 rad reads as 90°, not 90.0002°.
+  const rot = (part.rotation ?? [0, 0, 0]).map(r => Math.round(r * DEG * 100) / 100 + 0);
   const scale = part.scale === undefined ? [1, 1, 1] : typeof part.scale === "number" ? [part.scale, part.scale, part.scale] : part.scale;
   const materials = Object.keys(doc.materials ?? {});
 

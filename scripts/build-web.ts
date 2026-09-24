@@ -26,6 +26,7 @@ export async function buildWeb(outdir = join(root, "web-dist")): Promise<void> {
   if (!result.success) throw new AggregateError(result.logs, "web build failed");
 
   cpSync(join(root, "site"), outdir, { recursive: true });
+  cpSync(join(root, "LICENSE-fonts.txt"), join(outdir, "LICENSE-fonts.txt"));
   // Script parts can't run in the browser, so their examples stay out of the demo.
   const dir = join(root, "examples");
   const examples = readdirSync(dir).filter(f => f.endsWith(".model.yaml")).sort()

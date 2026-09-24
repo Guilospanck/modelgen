@@ -26,6 +26,7 @@ Shapes (${SHAPE_KEYS.join(", ")}):
   lathe: { profile: [[radius, y], ...], segments? } — revolved around y (vases, bottles, lamp bodies)
   tube: { path: [[x, y, z], ...], radius | radii: [r or [a, b] per point], segments?, boxiness? (2 round … 8 boxy) }
   blob: { shapes: [{ sphere: { center, radius } } | { ellipsoid: { center, radii } } | { capsule: { from, to, radius, radiusEnd? } } | { chain: { points, radii } }], blend?, resolution? } — one smooth surface blended from the shapes (organic forms)
+  text: { string, size, depth, align? (left | center | right), spacing?, lineHeight?, segments? } — extruded letters in xy, centred on z; size is the capital-letter height; "\\n" starts a new line. Built-in font: IBM Plex Sans SemiBold (Latin-1 plus – — ‘ ’ “ ” • … € ™ ↑ ↓)
   script: { module, params? } — see topic scripts
 surface: true exempts detail (fur, scales) from the floating check; bump adds noise displacement.`,
   materials: `materials: { <name>: { color, roughness? (0.7), metalness? (0), opacity? (1), emissive?, texture? } }
