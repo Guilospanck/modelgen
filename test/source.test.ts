@@ -2,7 +2,7 @@ import { test, expect } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as YAML from "yaml";
-import { defineMaterials, editText } from "../src/document/source";
+import { defineMaterials, editText, renameModelText } from "../src/document/source";
 import { applyEdit } from "../src/document/ops";
 import { parseModelText, validateDocument, OpError, type ModelDoc } from "../src/document";
 
@@ -132,4 +132,10 @@ test("defineMaterials adds what parts reference, keeping comments", () => {
   expect(validateDocument(parseModelText(fixed, "m.yaml")).doc).toBeDefined();
   expect(defineMaterials(SRC, ["iron"])).toBe(SRC); // already there: nothing changes
   expect(defineMaterials("modelgen: 1\nname: x\nmaterials:\nparts: []\n", ["m"])).toBe('modelgen: 1\nname: x\nmaterials:\n  m: {color: "#c8c2b4"}\nparts: []\n');
+});
+
+test("renameModelText changes only the name and refuses bad names", () => {
+  const renamed = renameModelText(SRC, "desk-lamp");
+  expect(renamed).toBe(SRC.replace("name: lamp # the name", "name: desk-lamp # the name"));
+  expect(() => renameModelText(SRC, "Desk Lamp")).toThrow(OpError);
 });

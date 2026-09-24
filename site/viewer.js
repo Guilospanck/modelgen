@@ -269,6 +269,18 @@ export function createViewer(container, on = {}) {
         resolve();
       }, reject));
     },
+    // An empty canvas: no model; the next one to load is framed afresh.
+    clear() {
+      loads++; // a load still on its way is stale now
+      gizmo.detach();
+      clearHandles();
+      outline.visible = false;
+      if (model) { scene.remove(model); disposeTree(model); }
+      model = null;
+      modelName = null;
+      nodes = new Map();
+      fit = { ...fit, box: null };
+    },
     // sel: { name, points?: [{ pos, flat }], point?: index } or null
     select(sel) { selected = sel; attach(); },
     setMode(m) { mode = m; if (activeHandle < 0) gizmo.setMode(m); },

@@ -42,6 +42,10 @@ export const BLOB_SHAPES = {
   chain: { fields: [["points", "points3"], ["radii", "nums"]], make: s => ({ points: [[0, 0, 0], [0, s / 2, 0], [s / 4, s, 0]], radii: [s / 4, s / 5, s / 8] }) },
 };
 
+// How high a new part's origin sits when it stands on the floor (the first part of a model).
+const REST = { torus: s => s / 8, plane: () => 0, lathe: () => 0, tube: s => s / 12, text: s => s / 4 };
+export const restHeight = (shape, s) => (REST[shape] ?? (x => x / 2))(s);
+
 // A point inside a new part (in its own space), for placing it so it touches the model.
 export const insidePoint = (shape, s) => SHAPES[shape]?.inside?.(s) ?? [0, 0, 0];
 

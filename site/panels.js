@@ -132,9 +132,16 @@ function fieldControl(kind, value, commit, path) {
   return h("code", {}, JSON.stringify(value));
 }
 
-export function renderProperties(root, { doc, part, parent, problems, edit, select, newMaterial, fixable, fix }) {
+export function renderProperties(root, { doc, part, parent, problems, edit, select, newMaterial, fixable, fix, renameModel }) {
+  // Nothing selected: the model itself.
   if (!part) {
-    root.replaceChildren(h("p", { class: "empty" }, "Select a part in the viewport or the list to edit it."));
+    const count = doc.parts.length;
+    keepFocus(root, () => root.replaceChildren(
+      h("h3", {}, "Model"),
+      h("div", { class: "row" }, h("label", { class: "label", for: "model-name-input" }, "Name"),
+        h("input", { id: "model-name-input", value: doc.name, dataset: { path: "model.name" }, onchange: e => { const n = e.target.value.trim(); if (n && n !== doc.name) renameModel(n); } })),
+      h("p", { class: "note" }, "Lowercase letters, digits, _ and -. Downloads are named after it."),
+      h("p", { class: "empty" }, count ? "Select a part in the viewport or the list to edit it." : "Use Add to place the first part.")));
     return;
   }
   const name = part.name, shape = shapeOf(part);

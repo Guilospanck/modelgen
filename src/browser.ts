@@ -3,7 +3,7 @@
 import { OpError, type Issue } from "./document/issues";
 import { parseModelText } from "./document/text";
 import { validateDocument } from "./document/validate";
-import { defineMaterials, editText } from "./document/source";
+import { defineMaterials, editText, renameModelText } from "./document/source";
 import type { ModelDoc } from "./document/schema";
 import { compileTree } from "./scene/tree";
 import { exportModelFiles, FORMATS, type ExportedFile, type Format } from "./export/model";
@@ -52,3 +52,7 @@ export function editModel(text: string, ops: unknown[], opts: { json?: boolean }
 
 export { defineMaterials };
 export { promptFor, followUpFor, parseOpsReply } from "./assistant";
+
+export function renameModel(text: string, name: string): { text?: string; issues: Issue[] } {
+  return guard<{ text?: string; issues: Issue[] }>(() => ({ text: renameModelText(text, name), issues: [] }), {});
+}

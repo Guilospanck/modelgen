@@ -41,7 +41,7 @@ test("bad YAML, bad schema and floating parts are issues, not throws", () => {
 test("the web bundle runs without Node's Buffer and zlib", async () => {
   const out = mkdtempSync(join(tmpdir(), "modelgen-web-"));
   await buildWeb(out);
-  expect(readdirSync(out).sort()).toEqual(["LICENSE-fonts.txt", "app.js", "assistant.js", "examples.json", "index.html", "modelgen.js", "panels.js", "shapes.js", "style.css", "viewer.js"]);
+  expect(readdirSync(out).sort()).toEqual(["LICENSE-fonts.txt", "app.js", "assistant.js", "examples.json", "index.html", "modelgen.js", "panels.js", "shapes.js", "store.js", "style.css", "viewer.js"]);
   expect(JSON.parse(readFileSync(join(out, "examples.json"), "utf8")).map((e: { name: string }) => e.name)).toEqual(["crate", "keycap", "lantern", "mug"]);
 
   // Plain Node with the browser-missing globals removed stands in for a browser.

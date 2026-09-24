@@ -174,3 +174,21 @@ export function defineMaterials(text: string, names: string[], color = "#c8c2b4"
   }
   return ydoc.toString(YAML_PRINT);
 }
+
+export const MODEL_NAME = /^[a-z0-9][a-z0-9_-]*$/;
+
+// Renames the model (its top-level name), keeping comments. There's no edit op for this: outputs
+// are named after the model, so the CLI renames by renaming the file; the playground has no file.
+export function renameModelText(text: string, name: string): string {
+  if (!MODEL_NAME.test(name)) {
+    const message = `"${name}" can't be a model name`;
+    throw new OpError(message, [{ severity: "error", code: "invalid_name", path: "name", message, hint: "use lowercase letters, digits, _ and - (starting with a letter or digit)" }]);
+  }
+  const ydoc = YAML.parseDocument(text);
+  if (ydoc.errors.length || !YAML.isMap(ydoc.contents)) throw new OpError("the model has problems; fix them before renaming it");
+  const top = ydoc.contents as YAML.YAMLMap<unknown, unknown>;
+  const node = top.get("name", true);
+  if (YAML.isScalar(node)) node.value = name;
+  else insertPair(top, ydoc.createPair("name", name), TOP_KEYS);
+  return ydoc.toString(YAML_PRINT);
+}

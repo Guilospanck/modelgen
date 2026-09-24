@@ -1,15 +1,22 @@
-import { buildModel, defineMaterials, editModel, parseModel, PATTERNS, VERSION } from "./modelgen.js";
+import { buildModel, defineMaterials, editModel, parseModel, renameModel, PATTERNS, VERSION } from "./modelgen.js";
 import { createViewer, niceStep } from "./viewer.js";
 import { renderTree, renderProperties, renderMaterials, h } from "./panels.js";
-import { SHAPES, handlesFor, insidePoint, movePoint, round, uniqueName, allParts } from "./shapes.js";
+import { SHAPES, handlesFor, insidePoint, movePoint, restHeight, round, uniqueName, allParts } from "./shapes.js";
 import { createAssistant } from "./assistant.js";
+import { listModels, loadModel, saveModel, deleteModel } from "./store.js";
 
 const $ = id => document.getElementById(id);
 const yaml = $("yaml"), status = $("status");
 
 // The YAML text is the model. Every edit, from any panel or the viewport, produces new text;
-// history is a list of texts.
-const state = { text: "", doc: null, issues: [], selected: null, point: null, files: {}, name: "model", history: [], at: -1 };
+// history is a list of texts. source says where the open model came from (an example, a new
+// canvas, a shared link, or a model saved in this browser, with its id); savedText is the text
+// as last opened or saved, so changes since then are unsaved.
+const state = {
+  text: "", doc: null, issues: [], selected: null, point: null, files: {}, name: "model", history: [], at: -1,
+  source: { kind: "example", id: null }, savedText: "",
+};
+const dirty = () => state.text !== state.savedText;
 
 const viewer = createViewer($("viewer"), {
   scale: step => { $("scale").textContent = `Grid squares: ${step}`; },
@@ -32,7 +39,7 @@ const viewer = createViewer($("viewer"), {
 });
 
 const examples = await (await fetch("examples.json")).json();
-for (const e of examples) $("example").append(new Option(e.name, e.name));
+const EMPTY = "modelgen: 1\nname: untitled\nparts: []\n";
 
 // ---------- model text, history, edits ----------
 
@@ -93,13 +100,17 @@ function rebuild(parsed) {
     $(f).disabled = !state.files[f];
     $(f).title = state.files[f] ? `${Math.round(state.files[f].length / 1024)} KB` : "Fix the problems listed in the sidebar to download";
   }
-  $("stale").hidden = !!r.preview || !viewer.hasModel;
+  // A model without parts is an empty canvas, not a problem.
+  const empty = !!state.doc && state.doc.parts.length === 0;
+  $("empty-canvas").hidden = !empty;
+  if (empty) viewer.clear();
+  $("stale").hidden = empty || !!r.preview || !viewer.hasModel;
   if (r.preview) {
     const parts = allParts(state.doc.parts).map(x => x.part.name);
     const problems = r.issues.filter(i => i.severity === "error" && i.part).map(i => i.part);
     viewer.show(r.preview, r.name, { parts, problems }).then(syncViewer, e => say(`Preview failed: ${e.message}`));
   }
-  status.textContent = r.files.length ? `Built ${r.name} in ${ms} ms` : "Can't download yet: see the problems in the sidebar";
+  status.textContent = empty ? "Empty canvas" : r.files.length ? `Built ${r.name} in ${ms} ms` : "Can't download yet: see the problems in the sidebar";
   render();
 }
 
@@ -119,6 +130,12 @@ function select(name, point = null) {
 
 function render() {
   renderIssues();
+  const name = state.doc?.name ?? state.name, unsaved = dirty();
+  $("model-name").textContent = unsaved ? `${name} •` : name;
+  $("models").title = unsaved ? "Unsaved changes" : state.source.kind === "saved" ? "Saved in this browser" : "Not saved yet";
+  $("save").textContent = state.source.kind === "saved" && !unsaved ? "Saved" : "Save";
+  $("save").classList.toggle("primary", unsaved);
+  document.title = `${name}${unsaved ? " •" : ""} – modelgen playground`;
   $("add").disabled = !state.doc;
   $("undo").disabled = state.at <= 0;
   $("redo").disabled = state.at >= state.history.length - 1;
@@ -133,7 +150,7 @@ function render() {
   const hit = find(state.selected);
   renderTree($("tree"), { doc: state.doc, selected: state.selected, problems, select, edit });
   renderProperties($("props"), {
-    doc: state.doc, part: hit?.part, parent: hit?.parent, problems: state.issues, edit, select, fixable, fix,
+    doc: state.doc, part: hit?.part, parent: hit?.parent, problems: state.issues, edit, select, fixable, fix, renameModel: renameCurrentModel,
     newMaterial: partName => {
       const name = uniqueName("material", new Set(Object.keys(state.doc.materials ?? {})));
       edit([{ set_material: { name, material: { color: "#c8c2b4", roughness: 0.6 } } }, { update: { name: partName, set: { material: name } } }]);
@@ -164,10 +181,11 @@ function fix(issues) {
 }
 
 function renderIssues() {
-  const fixes = state.issues.filter(fixable);
+  const shown = state.doc?.parts.length === 0 ? state.issues.filter(i => i.code !== "empty") : state.issues;
+  const fixes = shown.filter(fixable);
   $("issues").replaceChildren(...[
-    fixes.length > 1 ? h("div", { class: "issues-head" }, h("span", {}, `${state.issues.length} problems`), h("button", { type: "button", class: "small primary", onclick: () => fix(fixes) }, "Fix all")) : null,
-    ...state.issues.map(i => h("div", { class: `issue ${i.severity}` },
+    fixes.length > 1 ? h("div", { class: "issues-head" }, h("span", {}, `${shown.length} problems`), h("button", { type: "button", class: "small primary", onclick: () => fix(fixes) }, "Fix all")) : null,
+    ...shown.map(i => h("div", { class: `issue ${i.severity}` },
       h("p", {},
         i.part ? h("button", { type: "button", class: "link", onclick: () => { showTab("scene"); select(i.part); } }, i.part) : null,
         i.part ? ": " : null,
@@ -190,6 +208,8 @@ function addPart(shape) {
   // the new shape lands on the model's surface, straight down through its middle.
   const at = !parent && viewer.surfacePoint();
   if (at && shape !== "group") { const inside = insidePoint(shape, size); part.position = round(at.map((v, i) => v - inside[i])); }
+  // The first part of an empty canvas stands on the floor.
+  else if (!state.doc.parts.length && shape !== "group") part.position = [0, round(restHeight(shape, size)), 0];
   if (edit([{ add: { ...(parent ? { parent } : {}), part } }])) select(name);
 }
 
@@ -285,13 +305,119 @@ yaml.addEventListener("keydown", e => {
 const encode = s => btoa(Array.from(new TextEncoder().encode(s), b => String.fromCharCode(b)).join("")).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const decode = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0)));
 
-$("example").addEventListener("change", e => {
-  const example = examples.find(x => x.name === e.target.value);
-  if (!example) return;
+// ---------- opening and saving models ----------
+
+// Opens a model with a fresh undo history, after asking about unsaved changes.
+async function openModel(text, source) {
+  if (!(await leaveCurrent())) return false;
   history.replaceState(null, "", location.pathname);
   state.selected = null;
-  setText(example.text);
+  state.point = null;
+  state.source = source;
+  state.savedText = text;
+  state.history = [];
+  state.at = -1;
+  try { if (source.kind === "saved") localStorage.setItem("modelgen.last", source.id); else localStorage.removeItem("modelgen.last"); } catch { /* fine */ }
+  setText(text);
+  return true;
+}
+
+// true when it's fine to replace the open model: nothing unsaved, or the visitor chose.
+function leaveCurrent() {
+  if (!dirty()) return Promise.resolve(true);
+  const dialog = $("leave");
+  $("leave-name").textContent = state.doc?.name ?? state.name;
+  // The choice is taken from the buttons (and Escape) directly rather than the dialog's close
+  // event, which some browsers deliver late or not at all.
+  return new Promise(resolve => {
+    const done = async choice => {
+      dialog.removeEventListener("click", onClick);
+      dialog.removeEventListener("cancel", onCancel);
+      dialog.close();
+      resolve(choice === "save" ? await save() : choice === "discard");
+    };
+    const onClick = e => { const b = e.target.closest("button[value]"); if (b) { e.preventDefault(); done(b.value); } };
+    const onCancel = e => { e.preventDefault(); done("cancel"); };
+    dialog.addEventListener("click", onClick);
+    dialog.addEventListener("cancel", onCancel);
+    dialog.showModal();
+  });
+}
+
+// Saves into this browser: the first save of an example or new model makes a new entry.
+async function save() {
+  try {
+    const saved = await saveModel({ id: state.source.kind === "saved" ? state.source.id : undefined, name: state.doc?.name ?? state.name, text: state.text });
+    state.source = { kind: "saved", id: saved.id };
+    state.savedText = state.text;
+    try { localStorage.setItem("modelgen.last", saved.id); } catch { /* fine */ }
+    say(`Saved "${saved.name}" in this browser`);
+    render();
+    return true;
+  } catch (e) {
+    say(`Couldn't save: ${e.message}`);
+    return false;
+  }
+}
+
+const modelsMenu = $("models-menu");
+function closeModels() { modelsMenu.hidden = true; $("models").setAttribute("aria-expanded", "false"); }
+async function fillModelsMenu() {
+  let saved = [];
+  try { saved = await listModels(); } catch { /* storage off: no saved section */ }
+  const when = t => new Date(t).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  const item = (label, onclick, extra) => h("button", { type: "button", role: "menuitem", onclick: async () => { closeModels(); await onclick(); } }, label, extra);
+  const row = m => {
+    const del = h("button", {
+      type: "button", class: "icon", title: "Delete", "aria-label": `Delete ${m.name}`,
+      // Two clicks: the first arms it, so a stray click can't delete a model.
+      onclick: async e => {
+        e.stopPropagation();
+        if (!del.classList.contains("armed")) { del.classList.add("armed"); del.textContent = "Delete?"; return; }
+        await deleteModel(m.id);
+        if (state.source.kind === "saved" && state.source.id === m.id) { state.source = { kind: "new", id: null }; state.savedText = ""; render(); }
+        say(`Deleted "${m.name}"`);
+        fillModelsMenu();
+      },
+    }, "×");
+    return h("div", { class: `saved-row${state.source.id === m.id ? " current" : ""}` },
+      item(h("span", { class: "saved-name" }, m.name), async () => { const x = await loadModel(m.id); if (x) await openModel(x.text, { kind: "saved", id: x.id }); }, h("span", { class: "when" }, when(m.updated))),
+      del);
+  };
+  modelsMenu.replaceChildren(
+    item("New model", () => openModel(EMPTY, { kind: "new", id: null })),
+    h("p", { class: "menu-head" }, "Saved in this browser"),
+    ...(saved.length ? saved.map(row) : [h("p", { class: "menu-note" }, "Nothing saved yet. Save keeps the open model here.")]),
+    h("p", { class: "menu-head" }, "Examples"),
+    ...examples.map(e => item(e.name, () => openModel(e.text, { kind: "example", id: null }))),
+  );
+}
+$("models").addEventListener("click", async () => {
+  if (!modelsMenu.hidden) return closeModels();
+  await fillModelsMenu();
+  modelsMenu.hidden = false;
+  $("models").setAttribute("aria-expanded", "true");
+  modelsMenu.querySelector("button")?.focus();
 });
+document.addEventListener("click", e => { if (!e.target.closest(".menu")) closeModels(); });
+modelsMenu.addEventListener("keydown", e => {
+  const items = [...modelsMenu.querySelectorAll('[role="menuitem"]')], i = items.indexOf(document.activeElement);
+  if (e.key === "Escape") { closeModels(); $("models").focus(); }
+  if (e.key === "ArrowDown") { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+  if (e.key === "ArrowUp") { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+});
+$("save").addEventListener("click", save);
+document.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); save(); }
+});
+// Closing the tab with unsaved changes gets the browser's own warning.
+addEventListener("beforeunload", e => { if (dirty()) e.preventDefault(); });
+
+function renameCurrentModel(name) {
+  const r = renameModel(state.text, name);
+  if (!r.text) { say(r.issues[0]?.message ?? "That name doesn't work"); render(); return; }
+  setText(r.text);
+}
 function download(format) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([state.files[format]]));
@@ -310,12 +436,23 @@ $("share").addEventListener("click", async () => {
 });
 document.querySelector("h1").title = `modelgen ${VERSION}`;
 
-let initial = examples.find(e => e.name === "lantern") ?? examples[0];
-if (location.hash.length > 1) {
+// Opens, in order: a shared link, the model saved here that was open last time, the lantern.
+async function start() {
+  if (location.hash.length > 1) {
+    try {
+      const text = decode(location.hash.slice(1));
+      state.source = { kind: "shared", id: null };
+      state.savedText = text;
+      return setText(text);
+    } catch { /* bad link: fall through */ }
+  }
   try {
-    initial = { name: "shared", text: decode(location.hash.slice(1)) };
-    $("example").prepend(new Option("Shared link", "shared"));
-  } catch { /* bad link: fall back to the example */ }
+    const last = localStorage.getItem("modelgen.last");
+    const saved = last && (await loadModel(last));
+    if (saved) { state.source = { kind: "saved", id: saved.id }; state.savedText = saved.text; return setText(saved.text); }
+  } catch { /* storage off */ }
+  const lantern = examples.find(e => e.name === "lantern") ?? examples[0];
+  state.savedText = lantern.text;
+  setText(lantern.text);
 }
-$("example").value = initial.name;
-setText(initial.text);
+start();

@@ -30,9 +30,11 @@
       <button id="undo" type="button" title="Undo (⌘Z)">Undo</button>
       <button id="redo" type="button" title="Redo (⇧⌘Z)">Redo</button>
     </div>
-    <label class="pick">Example
-      <select id="example"></select>
-    </label>
+    <div class="menu">
+      <button id="models" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="models-menu"><span id="model-name">model</span></button>
+      <div id="models-menu" class="popup models-popup" role="menu" hidden></div>
+    </div>
+    <button id="save" type="button" title="Save in this browser (⌘S)">Save</button>
     <div class="end">
       <button id="share" type="button">Copy link</button>
       <button id="glb" type="button" class="primary" disabled>Download GLB</button>
@@ -46,6 +48,7 @@
       <div class="mat">
         <div id="viewer" class="viewer" role="img" aria-label="3D view of the model. Drag to orbit, scroll or pinch to zoom, click a part to select it."></div>
         <p id="scale" class="scale"></p>
+        <p id="empty-canvas" class="empty-canvas" hidden>Empty canvas. Use <strong>Add</strong> to place the first part.</p>
         <p id="stale" class="stale" hidden>Showing the last version that built. Fix the problems in the sidebar to update it.</p>
         <div class="tools" role="toolbar" aria-label="Transform">
           <button type="button" data-mode="translate" aria-pressed="true" title="Move (W)">Move</button>
@@ -82,5 +85,17 @@
       <div id="issues" class="issues" aria-live="polite"></div>
     </aside>
   </main>
+
+  <dialog id="leave" class="leave" aria-labelledby="leave-title">
+    <form method="dialog">
+      <p id="leave-title" class="title">Save changes to <span id="leave-name"></span>?</p>
+      <p class="hint">Otherwise they're lost when the other model opens.</p>
+      <div class="row-buttons">
+        <button value="save" class="primary">Save</button>
+        <button value="discard">Don't save</button>
+        <button value="cancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
 </body>
 </html>
