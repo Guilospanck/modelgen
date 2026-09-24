@@ -88,32 +88,6 @@ tag version $notes="":
     git push origin "v$ver"
     echo "✓ Pushed v$ver — CI will build, test, release, publish to npm and update the tap."
 
-# Runs from this machine without provenance (that needs CI). Extra args go to
-# `npm publish`.
-# Usage: just publish-npm
-#        just publish-npm --dry-run
-#        just publish-npm --otp=123456
-
-# Test, build and publish the package.json version to npm.
-publish-npm *ARGS:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    user="$(npm whoami 2>/dev/null)" || { echo "✗ not logged in — run: npm login" >&2; exit 1; }
-    if [[ -n "$(git status --porcelain)" ]]; then
-        echo "✗ working tree not clean — commit or stash first." >&2; exit 1
-    fi
-    name="$(node -p 'require("./package.json").name')"
-    ver="$(node -p 'require("./package.json").version')"
-    if npm view "$name@$ver" version >/dev/null 2>&1; then
-        echo "✗ $name@$ver is already on npm — bump the version first." >&2; exit 1
-    fi
-    bun install --frozen-lockfile
-    bun test
-    bun run typecheck
-    bun run build:npm
-    npm publish --access public {{ARGS}}
-    echo "✓ Published $name@$ver as $user (args: {{ARGS}})"
-
 # One-time: create a write-scoped deploy key for the tap and store its private
 # half as a secret in this repo, so CI can push the formula. Needs gh (authed).
 # Usage: just setup-tap-key
