@@ -3,13 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The page has its own dark theme; stop Dark Reader from recoloring the 3D mat. -->
+  <meta name="darkreader-lock">
   <title>modelgen playground</title>
   <meta name="description" content="Write a modelgen model in YAML and see it as a 3D model. Download GLB and USDZ. Runs entirely in your browser.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="style.css">
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@4/dist/model-viewer.min.js"></script>
+  <script type="importmap">
+    { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+    } }
+  </script>
   <script type="module" src="app.js"></script>
 </head>
 <body>
@@ -24,7 +31,8 @@
   <main>
     <section class="stage" aria-label="3D preview">
       <div class="mat">
-        <model-viewer id="viewer" camera-controls touch-action="pan-y" shadow-intensity="0.8" exposure="1.05" interaction-prompt="none" alt="Preview of the model"></model-viewer>
+        <div id="viewer" class="viewer" role="img" aria-label="3D preview of the model. Drag to rotate, scroll or pinch to zoom."></div>
+        <p id="scale" class="scale"></p>
         <p id="stale" class="stale" hidden>Showing the last version that built. Fix the problems below to update it.</p>
       </div>
       <div class="actions">

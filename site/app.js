@@ -1,9 +1,11 @@
 import { buildModel, VERSION } from "./modelgen.js";
+import { createViewer } from "./viewer.js";
 
 const $ = id => document.getElementById(id);
-const yaml = $("yaml"), viewer = $("viewer"), issuesEl = $("issues"), status = $("status");
+const yaml = $("yaml"), issuesEl = $("issues"), status = $("status");
 const buttons = { glb: $("glb"), usdz: $("usdz") };
-let current = { name: "model", files: {} }, urls = [], timer;
+let current = { name: "model", files: {} }, timer;
+const viewer = createViewer($("viewer"), { onScale: step => { $("scale").textContent = `Grid squares: ${step}`; } });
 
 const examples = await (await fetch("examples.json")).json();
 for (const e of examples) $("example").append(new Option(e.name, e.name));
@@ -41,15 +43,12 @@ function rebuild() {
   const ms = Math.round(performance.now() - t0);
   render(result.issues);
   const ok = result.files.length > 0 && !result.issues.some(i => i.severity === "error");
-  $("stale").hidden = ok || !viewer.src;
+  $("stale").hidden = ok || !viewer.hasModel;
   if (!ok) { status.textContent = "Didn't build"; return; }
 
-  urls.forEach(URL.revokeObjectURL);
   const files = Object.fromEntries(result.files.map(f => [f.format, f.data]));
-  urls = Object.values(files).map(d => URL.createObjectURL(new Blob([d])));
   current = { name: result.name, files };
-  viewer.src = URL.createObjectURL(new Blob([files.glb], { type: "model/gltf-binary" }));
-  urls.push(viewer.src);
+  viewer.show(files.glb, result.name).catch(e => { status.textContent = `Preview failed: ${e.message}`; });
   for (const f of ["glb", "usdz"]) { buttons[f].disabled = !files[f]; buttons[f].title = files[f] ? kb(files[f].length) : ""; }
   status.textContent = `Built ${result.name} in ${ms} ms`;
 }
