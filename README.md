@@ -1,4 +1,6 @@
-# modelgen
+<p align="center"><img src="assets/icon.png" alt="modelgen icon" width="128" height="128"></p>
+
+<h1 align="center">modelgen</h1>
 
 Generate 3D models by describing them. Tell your AI agent "make me a witch's
 lantern" and it builds one with modelgen's tools, looks at renders, fixes
